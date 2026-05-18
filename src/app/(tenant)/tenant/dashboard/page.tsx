@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from '@/components/ui/card'
 
+export const dynamic = 'force-dynamic'
+
 export default async function TenantDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
