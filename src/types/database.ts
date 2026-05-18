@@ -1,0 +1,83 @@
+// src/types/database.ts
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[]
+
+export type PropertyFeatures = {
+  bedrooms?: number
+  bathrooms?: number
+  area_sqm?: number
+  parking_spots?: number
+  floor?: number
+  [key: string]: Json | undefined
+}
+
+export type ContractStatus = 'active' | 'ending' | 'ended' | 'cancelled'
+export type PaymentStatus = 'pending' | 'paid' | 'overdue'
+export type UserRole = 'admin' | 'tenant'
+export type TerminationReason = 'non_renewal_admin' | 'non_renewal_tenant' | 'renewed'
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: { id: string; role: UserRole; created_at: string }
+        Insert: { id: string; role?: UserRole }
+        Update: { role?: UserRole }
+      }
+      owners: {
+        Row: { id: string; full_name: string; document_number: string | null; phone: string | null; email: string | null; created_at: string }
+        Insert: { id?: string; full_name: string; document_number?: string; phone?: string; email?: string }
+        Update: { full_name?: string; document_number?: string; phone?: string; email?: string }
+      }
+      properties: {
+        Row: { id: string; name: string; address: string; type: string; description: string | null; features: PropertyFeatures; is_published: boolean; created_at: string }
+        Insert: { id?: string; name: string; address: string; type: string; description?: string; features?: PropertyFeatures; is_published?: boolean }
+        Update: { name?: string; address?: string; type?: string; description?: string; features?: PropertyFeatures; is_published?: boolean }
+      }
+      property_owners: {
+        Row: { id: string; property_id: string; owner_id: string; ownership_pct: number; created_at: string }
+        Insert: { id?: string; property_id: string; owner_id: string; ownership_pct?: number }
+        Update: { ownership_pct?: number }
+      }
+      property_photos: {
+        Row: { id: string; property_id: string; photo_url: string; is_cover: boolean; sort_order: number; created_at: string }
+        Insert: { id?: string; property_id: string; photo_url: string; is_cover?: boolean; sort_order?: number }
+        Update: { photo_url?: string; is_cover?: boolean; sort_order?: number }
+      }
+      tenants: {
+        Row: { id: string; user_id: string | null; full_name: string; document_number: string | null; phone: string | null; email: string; created_at: string }
+        Insert: { id?: string; user_id?: string; full_name: string; document_number?: string; phone?: string; email: string }
+        Update: { user_id?: string; full_name?: string; document_number?: string; phone?: string; email?: string }
+      }
+      insurers: {
+        Row: { id: string; name: string; contact_name: string | null; phone: string | null; email: string | null; created_at: string }
+        Insert: { id?: string; name: string; contact_name?: string; phone?: string; email?: string }
+        Update: { name?: string; contact_name?: string; phone?: string; email?: string }
+      }
+      contracts: {
+        Row: { id: string; property_id: string; tenant_id: string; start_date: string; end_date: string; monthly_rent: number; administration_fee: number; ipc_rate: number; status: ContractStatus; termination_reason: TerminationReason | null; termination_notice_date: string | null; ended_at: string | null; notes: string | null; created_at: string }
+        Insert: { id?: string; property_id: string; tenant_id: string; start_date: string; end_date: string; monthly_rent: number; administration_fee?: number; ipc_rate?: number; status?: ContractStatus; termination_reason?: TerminationReason; termination_notice_date?: string; ended_at?: string; notes?: string }
+        Update: { monthly_rent?: number; administration_fee?: number; ipc_rate?: number; status?: ContractStatus; termination_reason?: TerminationReason; termination_notice_date?: string; ended_at?: string; notes?: string }
+      }
+      payments: {
+        Row: { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: PaymentStatus; receipt_url: string | null; notes: string | null; created_at: string }
+        Insert: { id?: string; contract_id: string; amount: number; due_date: string; paid_date?: string; status?: PaymentStatus; receipt_url?: string; notes?: string }
+        Update: { amount?: number; due_date?: string; paid_date?: string; status?: PaymentStatus; receipt_url?: string; notes?: string }
+      }
+      documents: {
+        Row: { id: string; contract_id: string; type: string; file_url: string; uploaded_by: string | null; created_at: string }
+        Insert: { id?: string; contract_id: string; type: string; file_url: string; uploaded_by?: string }
+        Update: { type?: string; file_url?: string; uploaded_by?: string }
+      }
+      insurance_policies: {
+        Row: { id: string; contract_id: string; insurer_id: string; policy_number: string | null; monthly_cost: number; start_date: string; end_date: string; created_at: string }
+        Insert: { id?: string; contract_id: string; insurer_id: string; policy_number?: string; monthly_cost?: number; start_date: string; end_date: string }
+        Update: { policy_number?: string; monthly_cost?: number; start_date?: string; end_date?: string }
+      }
+      system_config: {
+        Row: { id: string; year: number; ipc_rate: number; min_wage_increase: number; renewal_notice_days: number; updated_at: string }
+        Insert: { id?: string; year: number; ipc_rate?: number; min_wage_increase?: number; renewal_notice_days?: number }
+        Update: { ipc_rate?: number; min_wage_increase?: number; renewal_notice_days?: number }
+      }
+    }
+  }
+}
