@@ -62,7 +62,7 @@ export interface Database {
       }
       contracts: {
         Row: { id: string; property_id: string; tenant_id: string; start_date: string; end_date: string; monthly_rent: number; administration_fee: number; ipc_rate: number; status: ContractStatus; termination_reason: TerminationReason | null; termination_notice_date: string | null; ended_at: string | null; notes: string | null; created_at: string }
-        Insert: { id?: string; property_id: string; tenant_id: string; start_date: string; end_date: string; monthly_rent: number; administration_fee?: number; ipc_rate?: number; status?: ContractStatus; termination_reason?: TerminationReason; termination_notice_date?: string; ended_at?: string; notes?: string }
+        Insert: { id?: string; property_id: string; tenant_id: string; start_date: string; end_date: string; monthly_rent: number; administration_fee?: number | null; ipc_rate?: number | null; status?: ContractStatus; termination_reason?: TerminationReason; termination_notice_date?: string; ended_at?: string; notes?: string | null }
         Update: { monthly_rent?: number; administration_fee?: number; ipc_rate?: number; status?: ContractStatus; termination_reason?: TerminationReason; termination_notice_date?: string; ended_at?: string; notes?: string }
         Relationships: []
       }

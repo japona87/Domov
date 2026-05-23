@@ -68,7 +68,16 @@ export async function createContract(formData: FormData) {
 
   const startDate = new Date(String(formData.get('start_date')))
   const endDate = new Date(String(formData.get('end_date')))
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    throw new Error('Fechas inválidas')
+  }
+  if (startDate >= endDate) {
+    throw new Error('La fecha de inicio debe ser anterior a la fecha de fin')
+  }
   const monthlyRent = Number(formData.get('monthly_rent'))
+  if (!monthlyRent || monthlyRent <= 0) {
+    throw new Error('Canon mensual inválido')
+  }
   const administrationFeeRaw = formData.get('administration_fee')
   const ipcRateRaw = formData.get('ipc_rate')
 
@@ -78,10 +87,10 @@ export async function createContract(formData: FormData) {
     start_date: startDate.toISOString().split('T')[0],
     end_date: endDate.toISOString().split('T')[0],
     monthly_rent: monthlyRent,
-    administration_fee: administrationFeeRaw && String(administrationFeeRaw) !== '' ? Number(administrationFeeRaw) : undefined,
-    ipc_rate: ipcRateRaw && String(ipcRateRaw) !== '' ? Number(ipcRateRaw) : undefined,
+    administration_fee: administrationFeeRaw && String(administrationFeeRaw) !== '' ? Number(administrationFeeRaw) : null,
+    ipc_rate: ipcRateRaw && String(ipcRateRaw) !== '' ? Number(ipcRateRaw) : null,
     status: 'active',
-    notes: formData.get('notes') ? String(formData.get('notes')) : undefined,
+    notes: formData.get('notes') ? String(formData.get('notes')) : null,
   }).select('id').single()
 
   if (error || !contract) throw new Error(error?.message ?? 'Error creando contrato')
@@ -134,25 +143,26 @@ export async function setContractEnding(
   documentPath: string | null
 ) {
   const supabase = await createClient()
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
-  if (documentPath !== null) {
-    const { error: docError } = await supabase.from('documents').insert({
-      contract_id: contractId,
-      type: 'termination_notice',
-      file_url: `${supabaseUrl}/storage/v1/object/documents/${documentPath}`,
-      uploaded_by: 'admin',
-    })
-    if (docError) throw new Error(docError.message)
-  }
-
+  // Update contract FIRST
   const { error } = await supabase.from('contracts').update({
     status: 'ending',
     termination_reason: reason,
     termination_notice_date: noticeDate,
   }).eq('id', contractId)
-
   if (error) throw new Error(error.message)
+
+  // Then insert document if provided
+  if (documentPath) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const documentUrl = `${supabaseUrl}/storage/v1/object/documents/${documentPath}`
+    await supabase.from('documents').insert({
+      contract_id: contractId,
+      type: 'termination_notice',
+      file_url: documentUrl,
+      uploaded_by: 'admin',
+    })
+  }
 
   revalidatePath(`/admin/contratos/${contractId}`)
   revalidatePath('/admin/contratos')
