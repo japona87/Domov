@@ -1,16 +1,19 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { DM_Sans, DM_Serif_Display } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const dmSans = DM_Sans({
   subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
 })
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const dmSerifDisplay = DM_Serif_Display({
   subsets: ['latin'],
+  weight: '400',
+  variable: '--font-heading',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -24,12 +27,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="es" className={`${dmSans.variable} ${dmSerifDisplay.variable}`}>
+      <body className="antialiased">
         {children}
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   )
