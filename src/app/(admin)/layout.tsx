@@ -20,6 +20,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               Propiedades
             </Link>
+            <Link
+              href="/admin/arrendatarios"
+              className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+            >
+              Arrendatarios
+            </Link>
+            <Link
+              href="/admin/contratos"
+              className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+            >
+              Contratos
+            </Link>
           </nav>
           <LogoutButton />
         </div>
