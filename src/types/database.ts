@@ -85,9 +85,9 @@ export interface Database {
         Relationships: []
       }
       system_config: {
-        Row: { id: string; year: number; ipc_rate: number; min_wage_increase: number; renewal_notice_days: number; updated_at: string }
-        Insert: { id?: string; year: number; ipc_rate?: number; min_wage_increase?: number; renewal_notice_days?: number }
-        Update: { ipc_rate?: number; min_wage_increase?: number; renewal_notice_days?: number }
+        Row: { id: number; year: number; ipc_rate: number | null; min_wage_increase: number | null; renewal_notice_days: number | null; updated_at: string | null }
+        Insert: { id?: number; year: number; ipc_rate?: number | null; min_wage_increase?: number | null; renewal_notice_days?: number | null; updated_at?: string | null }
+        Update: { ipc_rate?: number | null; min_wage_increase?: number | null; renewal_notice_days?: number | null; updated_at?: string | null }
         Relationships: []
       }
     }
