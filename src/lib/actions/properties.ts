@@ -134,7 +134,8 @@ export async function addPropertyPhoto(propertyId: string, photoUrl: string, isC
 
 export async function deletePropertyPhoto(photoId: string, photoPath: string, propertyId: string) {
   const supabase = await createClient()
-  await supabase.storage.from('property-photos').remove([photoPath])
+  const { error: storageError } = await supabase.storage.from('property-photos').remove([photoPath])
+  if (storageError) throw new Error(storageError.message)
   const { error } = await supabase.from('property_photos').delete().eq('id', photoId)
   if (error) throw new Error(error.message)
   revalidatePath(`/admin/propiedades/${propertyId}/fotos`)
