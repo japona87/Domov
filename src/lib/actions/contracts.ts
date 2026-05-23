@@ -39,9 +39,9 @@ export async function createTenant(formData: FormData) {
   const email = formData.get('email')
   const { error } = await supabase.from('tenants').insert({
     full_name: String(formData.get('full_name')),
-    document_number: formData.get('document_number') ? String(formData.get('document_number')) : undefined,
-    phone: formData.get('phone') ? String(formData.get('phone')) : undefined,
-    email: email ? String(email) : '',
+    document_number: formData.get('document_number') ? String(formData.get('document_number')) : null,
+    phone: formData.get('phone') ? String(formData.get('phone')) : null,
+    email: email ? String(email) : null,
   })
   if (error) throw new Error(error.message)
   revalidatePath('/admin/arrendatarios')
@@ -53,9 +53,9 @@ export async function updateTenant(id: string, formData: FormData) {
   const email = formData.get('email')
   const { error } = await supabase.from('tenants').update({
     full_name: String(formData.get('full_name')),
-    document_number: formData.get('document_number') ? String(formData.get('document_number')) : undefined,
-    phone: formData.get('phone') ? String(formData.get('phone')) : undefined,
-    email: email ? String(email) : undefined,
+    document_number: formData.get('document_number') ? String(formData.get('document_number')) : null,
+    phone: formData.get('phone') ? String(formData.get('phone')) : null,
+    email: email ? String(email) : null,
   }).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/arrendatarios')

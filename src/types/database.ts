@@ -50,8 +50,8 @@ export interface Database {
       }
       tenants: {
         Row: { id: string; user_id: string | null; full_name: string; document_number: string | null; phone: string | null; email: string; created_at: string }
-        Insert: { id?: string; user_id?: string; full_name: string; document_number?: string; phone?: string; email: string }
-        Update: { user_id?: string; full_name?: string; document_number?: string; phone?: string; email?: string }
+        Insert: { id?: string; user_id?: string; full_name: string; document_number?: string | null; phone?: string | null; email: string | null }
+        Update: { user_id?: string; full_name?: string; document_number?: string | null; phone?: string | null; email?: string | null }
         Relationships: []
       }
       insurers: {
