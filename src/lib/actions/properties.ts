@@ -115,6 +115,35 @@ export async function removePropertyOwner(propertyOwnerId: string, propertyId: s
   revalidatePath(`/admin/propiedades/${propertyId}`)
 }
 
+export async function updateOwner(
+  ownerId: string,
+  propertyOwnerId: string,
+  propertyId: string,
+  fullName: string,
+  documentNumber: string,
+  phone: string,
+  email: string,
+  ownershipPct: number
+) {
+  const supabase = await createClient()
+  const { error: ownerError } = await supabase
+    .from('owners')
+    .update({
+      full_name: fullName,
+      document_number: documentNumber || null,
+      phone: phone || null,
+      email: email || null,
+    })
+    .eq('id', ownerId)
+  if (ownerError) throw new Error(ownerError.message)
+  const { error: pctError } = await supabase
+    .from('property_owners')
+    .update({ ownership_pct: ownershipPct })
+    .eq('id', propertyOwnerId)
+  if (pctError) throw new Error(pctError.message)
+  revalidatePath(`/admin/propiedades/${propertyId}`)
+}
+
 export async function addPropertyPhoto(propertyId: string, photoUrl: string, isCover: boolean) {
   const supabase = await createClient()
   if (isCover) {

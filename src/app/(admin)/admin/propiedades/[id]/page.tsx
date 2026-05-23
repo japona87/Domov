@@ -27,7 +27,7 @@ export default async function EditarPropiedadPage({
 
   const { data: propertyOwners } = await supabase
     .from('property_owners')
-    .select('id, ownership_pct, owners(full_name, document_number)')
+    .select('id, ownership_pct, owners(id, full_name, document_number, phone, email)')
     .eq('property_id', id)
 
   const updateWithId = updateProperty.bind(null, id)
@@ -63,7 +63,7 @@ export default async function EditarPropiedadPage({
           owners={(propertyOwners ?? []) as {
             id: string
             ownership_pct: number
-            owners: { full_name: string; document_number: string | null } | null
+            owners: { id: string; full_name: string; document_number: string | null; phone: string | null; email: string | null } | null
           }[]}
         />
       </div>
