@@ -6,16 +6,30 @@ import { revalidatePath } from 'next/cache'
 export async function getSystemConfig() {
   const supabase = await createClient()
   const currentYear = new Date().getFullYear()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('system_config')
     .select('*')
     .eq('year', currentYear)
     .single()
+  if (error && error.code !== 'PGRST116') throw new Error(error.message)
   return data
 }
 
 export async function updateSystemConfig(formData: FormData) {
   const supabase = await createClient()
+
+  // Verify session
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  // Verify admin role
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profile?.role !== 'admin') throw new Error('No autorizado')
+
   const currentYear = new Date().getFullYear()
 
   const values = {
