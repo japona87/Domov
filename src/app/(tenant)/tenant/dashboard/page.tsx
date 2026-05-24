@@ -142,7 +142,7 @@ export default async function TenantDashboardPage() {
                   )}
                 </>
               ) : (
-                <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>¡Al día con tus pagos!</p>
+                <p className="text-sm font-medium text-accent">¡Al día con tus pagos!</p>
               )}
             </CardHeader>
             <CardContent>
