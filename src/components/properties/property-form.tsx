@@ -1,7 +1,7 @@
 // src/components/properties/property-form.tsx
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,9 +11,21 @@ import type { Database, PropertyFeatures } from '@/types/database'
 
 type Property = Database['public']['Tables']['properties']['Row']
 
+interface FieldConfig {
+  id: string
+  property_type: string
+  field_key: string
+  field_label: string
+  placeholder: string
+  field_type: string
+  sort_order: number
+  is_active: boolean
+}
+
 interface PropertyFormProps {
   property?: Property
   onSubmit: (formData: FormData) => Promise<void>
+  featureConfigs: FieldConfig[]
 }
 
 const PROPERTY_TYPES = [
@@ -25,18 +37,13 @@ const PROPERTY_TYPES = [
   { value: 'other', label: 'Otro' },
 ]
 
-const FEATURE_FIELDS = [
-  { key: 'bedrooms', label: 'Habitaciones', placeholder: '3' },
-  { key: 'bathrooms', label: 'Baños', placeholder: '2' },
-  { key: 'area_sqm', label: 'Área (m²)', placeholder: '85' },
-  { key: 'parking_spots', label: 'Parqueaderos', placeholder: '1' },
-  { key: 'floor', label: 'Piso', placeholder: '4' },
-]
-
-export function PropertyForm({ property, onSubmit }: PropertyFormProps) {
+export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
   const features = (property?.features ?? {}) as PropertyFeatures
+
+  const visibleFields = featureConfigs.filter((f) => f.property_type === currentType && f.is_active)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -71,7 +78,8 @@ export function PropertyForm({ property, onSubmit }: PropertyFormProps) {
           <select
             id="type"
             name="type"
-            defaultValue={property?.type ?? 'apartment'}
+            value={currentType}
+            onChange={(e) => setCurrentType(e.target.value)}
             required
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -113,21 +121,86 @@ export function PropertyForm({ property, onSubmit }: PropertyFormProps) {
 
       <div className="bg-white rounded-lg border p-6 space-y-4">
         <h3 className="font-semibold text-slate-800">Características</h3>
+        {visibleFields.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay características configuradas para este tipo.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {visibleFields.map((f) => (
+              <div key={f.field_key} className="space-y-2">
+                <Label htmlFor={f.field_key}>{f.field_label}</Label>
+                {f.field_key === 'estrato' ? (
+                  <Input
+                    id={f.field_key}
+                    name={f.field_key}
+                    type="number"
+                    min="1"
+                    max="6"
+                    defaultValue={features[f.field_key as keyof PropertyFeatures] as number | undefined}
+                    placeholder={f.placeholder}
+                  />
+                ) : (
+                  <Input
+                    id={f.field_key}
+                    name={f.field_key}
+                    type={f.field_type}
+                    min={f.field_type === 'number' ? '0' : undefined}
+                    step={f.field_type === 'number' ? '0.01' : undefined}
+                    defaultValue={features[f.field_key as keyof PropertyFeatures] as number | undefined}
+                    placeholder={f.placeholder}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg border p-6 space-y-4">
+        <h3 className="font-semibold text-slate-800">Ubicación en mapa</h3>
+        <p className="text-xs text-muted-foreground">
+          En Google Maps busca el inmueble → Share → Embed a map → copia el valor del atributo <code className="bg-muted px-1 rounded">src</code> del iframe.
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="maps_url">URL del mapa embebido</Label>
+          <textarea
+            id="maps_url"
+            name="maps_url"
+            defaultValue={(property as (typeof property & { maps_url?: string | null }))?.maps_url ?? ''}
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono text-xs"
+            placeholder="https://www.google.com/maps/embed?pb=!1m18!..."
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border p-6 space-y-4">
+        <h3 className="font-semibold text-slate-800">Precio de referencia</h3>
+        <p className="text-xs text-muted-foreground">Estos valores se muestran en la landing pública.</p>
         <div className="grid grid-cols-2 gap-4">
-          {FEATURE_FIELDS.map((f) => (
-            <div key={f.key} className="space-y-2">
-              <Label htmlFor={f.key}>{f.label}</Label>
-              <Input
-                id={f.key}
-                name={f.key}
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={features[f.key as keyof PropertyFeatures] as number | undefined}
-                placeholder={f.placeholder}
-              />
-            </div>
-          ))}
+          <div className="space-y-2">
+            <Label htmlFor="monthly_price">Precio de arriendo mensual</Label>
+            <Input
+              id="monthly_price"
+              name="monthly_price"
+              type="number"
+              min="0"
+              step="1000"
+              defaultValue={property?.monthly_price ?? ''}
+              placeholder="Ej: 1500000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="administration_fee">Administración</Label>
+            <Input
+              id="administration_fee"
+              name="administration_fee"
+              type="number"
+              min="0"
+              step="1000"
+              defaultValue={property?.administration_fee ?? ''}
+              placeholder="Ej: 250000"
+            />
+          </div>
         </div>
       </div>
 
