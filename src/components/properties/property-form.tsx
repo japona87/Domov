@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { LoadingOverlay } from '@/components/admin/loading-overlay'
 import type { Database, PropertyFeatures } from '@/types/database'
 
 type Property = Database['public']['Tables']['properties']['Row']
@@ -41,6 +42,7 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
+  const [showMapHelp, setShowMapHelp] = useState(false)
   const features = (property?.features ?? {}) as PropertyFeatures
 
   const visibleFields = featureConfigs.filter((f) => f.property_type === currentType && f.is_active)
@@ -59,7 +61,9 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+    <>
+      <LoadingOverlay pending={isPending} message={property ? 'Actualizando inmueble...' : 'Creando inmueble...'} />
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
       <div className="bg-white rounded-lg border p-6 space-y-4">
         <h3 className="font-semibold text-slate-800">Información básica</h3>
 
@@ -156,10 +160,58 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
       </div>
 
       <div className="bg-white rounded-lg border p-6 space-y-4">
-        <h3 className="font-semibold text-slate-800">Ubicación en mapa</h3>
-        <p className="text-xs text-muted-foreground">
-          En Google Maps busca el inmueble → Share → Embed a map → copia el valor del atributo <code className="bg-muted px-1 rounded">src</code> del iframe.
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent shrink-0">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <h3 className="font-semibold text-slate-800">Ubicación en mapa</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMapHelp((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+            </svg>
+            ¿Cómo obtengo esta URL?
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              className={`transition-transform duration-200 ${showMapHelp ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        </div>
+
+        {showMapHelp && (
+          <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-3">
+            <p className="text-xs font-semibold text-foreground">Sigue estos 4 pasos en Google Maps:</p>
+            <div className="space-y-2.5">
+              {[
+                'Abre Google Maps y busca la dirección exacta del inmueble',
+                'Haz click en el botón Compartir (ícono de share)',
+                'Selecciona la pestaña "Insertar un mapa" (Embed a map)',
+                'Copia solo el valor del atributo src del iframe que aparece',
+              ].map((text, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full bg-accent text-accent-foreground text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2.5 space-y-1">
+              <p className="text-[10px] text-muted-foreground font-mono leading-relaxed">
+                {'<iframe src="'}<span className="text-accent font-semibold">https://www.google.com/maps/embed?pb=...</span>{'" ...></iframe>'}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Pega solo la parte resaltada — el valor dentro de src=""</p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="maps_url">URL del mapa embebido</Label>
           <textarea
@@ -212,6 +264,7 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
           Cancelar
         </Button>
       </div>
-    </form>
+      </form>
+    </>
   )
 }
