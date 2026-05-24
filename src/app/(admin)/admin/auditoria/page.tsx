@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { AuditTable } from './audit-table'
 import { cleanupAuditLogs } from '@/lib/actions/config'
+import { CleanupButton } from '@/components/admin/cleanup-button'
 
 export const dynamic = 'force-dynamic'
 
-const ENTITIES = ['property', 'owner', 'tenant', 'contract', 'property_owner', 'payment', 'feature_config'] as const
+const ENTITIES = ['property', 'owner', 'tenant', 'contract', 'property_owner', 'payment', 'feature_config', 'property_photo', 'system_config'] as const
 const ACTIONS = ['create', 'update', 'delete'] as const
 
 interface PageProps {
@@ -50,15 +51,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
         <div className="flex items-center gap-3">
           <p className="text-xs text-muted-foreground">Retención: {retentionDays} días</p>
           <form action={cleanupAuditLogs}>
-            <button
-              type="submit"
-              className="text-xs text-destructive hover:text-destructive/80 font-medium border border-destructive/30 rounded-md px-3 py-1.5 transition-colors"
-              onClick={(e) => {
-                if (!confirm(`¿Eliminar registros anteriores a ${retentionDays} días? Esta acción no se puede deshacer.`)) e.preventDefault()
-              }}
-            >
-              Limpiar historial
-            </button>
+            <CleanupButton retentionDays={retentionDays} />
           </form>
         </div>
       </div>

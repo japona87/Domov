@@ -1,7 +1,9 @@
 'use server'
 
+import type { Json } from '@/types/database'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logAudit } from '@/lib/audit'
 
 export async function addPropertyPhoto(propertyId: string, photoUrl: string) {
   const supabase = await createClient()
@@ -14,12 +16,14 @@ export async function addPropertyPhoto(propertyId: string, photoUrl: string) {
     .select('id', { count: 'exact', head: true })
     .eq('property_id', propertyId)
 
+  const isCover = (count ?? 0) === 0
   const { error } = await supabase.from('property_photos').insert({
     property_id: propertyId,
     photo_url: photoUrl,
-    is_cover: (count ?? 0) === 0,
+    is_cover: isCover,
   })
   if (error) throw new Error(error.message)
+  await logAudit({ action: 'create', entity: 'property_photo', entityId: propertyId, entityName: propertyId, changes: { photo_url: photoUrl, is_cover: isCover } as unknown as Json })
   revalidatePath(`/admin/propiedades/${propertyId}/fotos`)
   revalidatePath('/propiedades')
 }
@@ -39,6 +43,7 @@ export async function deletePropertyPhoto(photoId: string, storagePath: string, 
 
   const { error } = await supabase.from('property_photos').delete().eq('id', photoId)
   if (error) throw new Error(error.message)
+  await logAudit({ action: 'delete', entity: 'property_photo', entityId: photoId, entityName: propertyId })
 
   // If we deleted the cover, promote the next photo
   if (photo?.is_cover) {
@@ -66,6 +71,7 @@ export async function setCoverPhoto(propertyId: string, photoId: string) {
   await supabase.from('property_photos').update({ is_cover: false }).eq('property_id', propertyId)
   const { error } = await supabase.from('property_photos').update({ is_cover: true }).eq('id', photoId)
   if (error) throw new Error(error.message)
+  await logAudit({ action: 'update', entity: 'property_photo', entityId: photoId, entityName: propertyId, changes: { is_cover: { old: false, new: true } } as unknown as Json })
 
   revalidatePath(`/admin/propiedades/${propertyId}/fotos`)
   revalidatePath('/propiedades')
