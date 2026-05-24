@@ -1,9 +1,7 @@
-// src/app/(admin)/admin/propiedades/[id]/fotos/page.tsx
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
-import { PhotoUploader } from '@/components/properties/photo-uploader'
+import { PhotoManager } from '@/components/properties/photo-manager'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,34 +13,34 @@ export default async function FotosPropiedadPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: property } = await supabase
-    .from('properties')
-    .select('id, name')
-    .eq('id', id)
-    .single()
+  const [{ data: property }, { data: photos }] = await Promise.all([
+    supabase.from('properties').select('id, name').eq('id', id).single(),
+    supabase
+      .from('property_photos')
+      .select('id, photo_url, is_cover, sort_order')
+      .eq('property_id', id)
+      .order('sort_order'),
+  ])
 
   if (!property) notFound()
 
-  const { data: photos } = await supabase
-    .from('property_photos')
-    .select('id, photo_url, is_cover, sort_order')
-    .eq('property_id', id)
-    .order('sort_order')
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/propiedades/${id}`}>← Volver</Link>
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Fotos</h2>
-          <p className="text-slate-500">{property.name}</p>
-        </div>
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">
+          <Link href="/admin/propiedades" className="hover:underline">Propiedades</Link>
+          {' / '}
+          <Link href={`/admin/propiedades/${id}`} className="hover:underline">{property.name}</Link>
+          {' / '}Fotos
+        </p>
+        <h2 className="text-2xl font-heading text-foreground">Fotos del inmueble</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {photos?.length ?? 0} foto{(photos?.length ?? 0) !== 1 ? 's' : ''} · La foto de portada aparece en la página pública
+        </p>
       </div>
 
-      <div className="bg-white rounded-lg border p-6 max-w-3xl">
-        <PhotoUploader propertyId={id} photos={photos ?? []} />
+      <div className="bg-card rounded-xl border border-border p-6">
+        <PhotoManager propertyId={id} photos={photos ?? []} />
       </div>
     </div>
   )
