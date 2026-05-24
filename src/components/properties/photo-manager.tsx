@@ -52,14 +52,14 @@ export function PhotoManager({ propertyId, photos: initialPhotos }: PhotoManager
           .from('property-photos')
           .getPublicUrl(path)
 
-        await addPropertyPhoto(propertyId, publicUrl)
+        const { id: photoId, is_cover } = await addPropertyPhoto(propertyId, publicUrl)
 
         setPhotos((prev) => [
           ...prev,
           {
-            id: path,
+            id: photoId,
             photo_url: publicUrl,
-            is_cover: prev.length === 0,
+            is_cover,
             sort_order: prev.length,
           },
         ])

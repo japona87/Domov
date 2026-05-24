@@ -17,15 +17,16 @@ export async function addPropertyPhoto(propertyId: string, photoUrl: string) {
     .eq('property_id', propertyId)
 
   const isCover = (count ?? 0) === 0
-  const { error } = await supabase.from('property_photos').insert({
+  const { data, error } = await supabase.from('property_photos').insert({
     property_id: propertyId,
     photo_url: photoUrl,
     is_cover: isCover,
-  })
+  }).select('id, is_cover').single()
   if (error) throw new Error(error.message)
-  await logAudit({ action: 'create', entity: 'property_photo', entityId: propertyId, entityName: propertyId, changes: { photo_url: photoUrl, is_cover: isCover } as unknown as Json })
+  await logAudit({ action: 'create', entity: 'property_photo', entityId: data.id, entityName: propertyId, changes: { photo_url: photoUrl, is_cover: isCover } as unknown as Json })
   revalidatePath(`/admin/propiedades/${propertyId}/fotos`)
   revalidatePath('/propiedades')
+  return { id: data.id, is_cover: data.is_cover }
 }
 
 export async function deletePropertyPhoto(photoId: string, storagePath: string, propertyId: string) {
