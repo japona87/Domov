@@ -21,7 +21,12 @@ export async function inviteTenant(tenantId: string, email: string) {
   const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/tenant/dashboard`,
   })
-  if (inviteError) throw new Error(inviteError.message)
+  if (inviteError) {
+    if (inviteError.message.toLowerCase().includes('already registered')) {
+      throw new Error('Este email ya tiene una cuenta activa en el sistema.')
+    }
+    throw new Error(inviteError.message)
+  }
 
   const { error: updateError } = await adminClient
     .from('tenants')
@@ -29,10 +34,11 @@ export async function inviteTenant(tenantId: string, email: string) {
     .eq('id', tenantId)
   if (updateError) throw new Error(updateError.message)
 
-  await adminClient.from('profiles').upsert(
+  const { error: profileError } = await adminClient.from('profiles').upsert(
     { id: inviteData.user.id, role: 'tenant' },
     { onConflict: 'id' }
   )
+  if (profileError) throw new Error(profileError.message)
 
   revalidatePath(`/admin/arrendatarios/${tenantId}`)
 }
