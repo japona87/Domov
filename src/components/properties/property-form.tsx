@@ -190,13 +190,13 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
 
         {showMapHelp && (
           <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-3">
-            <p className="text-xs font-semibold text-foreground">Sigue estos 4 pasos en Google Maps:</p>
+            <p className="text-xs font-semibold text-foreground">Cómo obtener el mapa de Google Maps:</p>
             <div className="space-y-2.5">
               {[
-                'Abre Google Maps y busca la dirección exacta del inmueble',
-                'Haz click en el botón Compartir (ícono de share)',
-                'Selecciona la pestaña "Insertar un mapa" (Embed a map)',
-                'Copia solo el valor del atributo src del iframe que aparece',
+                'Busca la dirección del inmueble en Google Maps',
+                'Click en "Compartir" → pestaña "Insertar un mapa"',
+                'Click en "Copiar HTML" — copia todo el código que aparece',
+                'Pégalo en el campo de abajo — el sistema extrae el URL solo',
               ].map((text, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-accent text-accent-foreground text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
@@ -206,11 +206,13 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-border bg-background px-3 py-2.5 space-y-1">
-              <p className="text-[10px] text-muted-foreground font-mono leading-relaxed">
-                {'<iframe src="'}<span className="text-accent font-semibold">https://www.google.com/maps/embed?pb=...</span>{'" ...></iframe>'}
+            <div className="rounded-lg border border-border bg-background px-3 py-2.5 space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground">Puedes pegar el iframe completo o solo el URL:</p>
+              <p className="text-[10px] font-mono leading-relaxed break-all">
+                <span className="text-muted-foreground/50">{'<iframe src="'}</span>
+                <span className="text-accent font-semibold">https://www.google.com/maps/embed?pb=!1m18…</span>
+                <span className="text-muted-foreground/50">{'" …></iframe>'}</span>
               </p>
-              <p className="text-[10px] text-muted-foreground">Pega solo la parte resaltada — el valor dentro de src=""</p>
             </div>
           </div>
         )}
@@ -221,7 +223,11 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
             id="maps_url"
             name="maps_url"
             value={mapsUrl}
-            onChange={(e) => setMapsUrl(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value.trim()
+              const srcMatch = val.match(/src="([^"]+)"/)
+              setMapsUrl(srcMatch ? srcMatch[1] : val)
+            }}
             rows={3}
             className={`flex w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono text-xs transition-colors ${
               mapsUrlValid ? 'border-input' : 'border-destructive focus-visible:ring-destructive'
