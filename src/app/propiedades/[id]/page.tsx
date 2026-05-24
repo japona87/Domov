@@ -179,7 +179,7 @@ export default async function PropiedadDetallePage({
             )}
 
             {/* Map */}
-            {property.maps_url && (
+            {property.maps_url && property.maps_url.startsWith('https://www.google.com/maps/embed') && (
               <div>
                 <h2 className="font-heading text-xl text-foreground mb-4">Ubicación</h2>
                 <div className="rounded-2xl overflow-hidden border border-border aspect-video">

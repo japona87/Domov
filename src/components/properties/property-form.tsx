@@ -43,7 +43,10 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
   const [showMapHelp, setShowMapHelp] = useState(false)
+  const [mapsUrl, setMapsUrl] = useState((property as (typeof property & { maps_url?: string | null }))?.maps_url ?? '')
   const features = (property?.features ?? {}) as PropertyFeatures
+
+  const mapsUrlValid = !mapsUrl || mapsUrl.startsWith('https://www.google.com/maps/embed')
 
   const visibleFields = featureConfigs.filter((f) => f.property_type === currentType && f.is_active)
 
@@ -217,11 +220,36 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
           <textarea
             id="maps_url"
             name="maps_url"
-            defaultValue={(property as (typeof property & { maps_url?: string | null }))?.maps_url ?? ''}
+            value={mapsUrl}
+            onChange={(e) => setMapsUrl(e.target.value)}
             rows={3}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono text-xs"
+            className={`flex w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono text-xs transition-colors ${
+              mapsUrlValid ? 'border-input' : 'border-destructive focus-visible:ring-destructive'
+            }`}
             placeholder="https://www.google.com/maps/embed?pb=!1m18!..."
           />
+          {!mapsUrlValid && (
+            <div className="flex items-start gap-2 rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-destructive shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+              </svg>
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-destructive">URL inválida</p>
+                <p className="text-xs text-muted-foreground">
+                  Pega solo el valor del atributo <code className="bg-muted px-1 rounded">src</code>, no el iframe completo. Debe comenzar con{' '}
+                  <span className="font-mono text-[10px]">https://www.google.com/maps/embed</span>
+                </p>
+              </div>
+            </div>
+          )}
+          {mapsUrl && mapsUrlValid && (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              URL válida — el mapa se mostrará en la landing
+            </div>
+          )}
         </div>
       </div>
 
