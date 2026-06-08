@@ -27,7 +27,7 @@ export default async function TenantDashboardPage() {
   if (!tenant) {
     return (
       <div className="text-center py-20">
-        <p className="font-heading text-2xl text-foreground mb-2">Sin contrato asignado</p>
+        <p className="font-sans font-semibold text-2xl text-foreground mb-2">Sin contrato asignado</p>
         <p className="text-muted-foreground text-sm">Contacta al administrador para más información.</p>
       </div>
     )
@@ -78,7 +78,7 @@ export default async function TenantDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-heading text-foreground">
+        <h2 className="text-2xl font-sans font-semibold text-foreground">
           Bienvenido, {tenant.full_name?.split(' ')[0]}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">Resumen de tu arrendamiento</p>
@@ -98,7 +98,7 @@ export default async function TenantDashboardPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Inmueble</p>
-                    <CardTitle className="font-heading text-xl text-foreground">{c.properties?.name}</CardTitle>
+                    <CardTitle className="font-sans font-semibold text-xl text-foreground">{c.properties?.name}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-0.5">{c.properties?.address}</p>
                   </div>
                   {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
@@ -112,7 +112,7 @@ export default async function TenantDashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Canon mensual</p>
-                    <p className="font-heading text-lg text-foreground">${c.monthly_rent.toLocaleString('es-CO')}</p>
+                    <p className="font-sans font-semibold text-lg text-foreground">${c.monthly_rent.toLocaleString('es-CO')}</p>
                   </div>
                   {c.administration_fee != null && (
                     <div>
@@ -135,7 +135,7 @@ export default async function TenantDashboardPage() {
               <p className="text-xs text-muted-foreground">Próximo pago</p>
               {nextPayment ? (
                 <>
-                  <p className="font-heading text-2xl text-foreground">${nextPayment.amount.toLocaleString('es-CO')}</p>
+                  <p className="font-sans font-bold text-2xl text-foreground">${nextPayment.amount.toLocaleString('es-CO')}</p>
                   <p className="text-sm text-muted-foreground">Vence: {nextPayment.due_date}</p>
                   {(pendingCount ?? 0) > 1 && (
                     <p className="text-xs text-destructive mt-1">{pendingCount} cuotas pendientes en total</p>

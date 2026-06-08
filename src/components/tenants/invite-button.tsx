@@ -1,9 +1,21 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { inviteTenant } from '@/lib/actions/tenants-admin'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface InviteButtonProps {
   tenantId: string
@@ -12,6 +24,7 @@ interface InviteButtonProps {
 }
 
 export function InviteButton({ tenantId, email, hasUserId }: InviteButtonProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   if (!email) {
@@ -32,11 +45,11 @@ export function InviteButton({ tenantId, email, hasUserId }: InviteButtonProps) 
   }
 
   function handleInvite() {
-    if (!confirm(`¿Enviar invitación al portal a ${email}?`)) return
     startTransition(async () => {
       try {
         await inviteTenant(tenantId, email!)
         toast.success('Invitación enviada por email')
+        setConfirmOpen(false)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Error al enviar invitación'
         toast.error(msg)
@@ -45,8 +58,29 @@ export function InviteButton({ tenantId, email, hasUserId }: InviteButtonProps) 
   }
 
   return (
-    <Button onClick={handleInvite} disabled={isPending} size="sm">
-      {isPending ? 'Enviando...' : 'Invitar al portal'}
-    </Button>
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogTrigger render={
+        <Button disabled={isPending} size="sm">
+          {isPending ? 'Enviando...' : 'Invitar al portal'}
+        </Button>
+      } />
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia>
+            <img src="/logo-domov.png" alt="Domov" className="h-7 w-auto" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>¿Enviar invitación?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se enviará un email a <strong>{email}</strong> para que acceda al portal de arrendatarios.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleInvite} disabled={isPending}>
+            {isPending ? 'Enviando...' : 'Enviar invitación'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

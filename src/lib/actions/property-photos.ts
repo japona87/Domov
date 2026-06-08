@@ -69,8 +69,8 @@ export async function setCoverPhoto(propertyId: string, photoId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  await supabase.from('property_photos').update({ is_cover: false }).eq('property_id', propertyId)
-  const { error } = await supabase.from('property_photos').update({ is_cover: true }).eq('id', photoId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)('set_cover_photo', { p_property_id: propertyId, p_photo_id: photoId })
   if (error) throw new Error(error.message)
   await logAudit({ action: 'update', entity: 'property_photo', entityId: photoId, entityName: propertyId, changes: { is_cover: { old: false, new: true } } as unknown as Json })
 

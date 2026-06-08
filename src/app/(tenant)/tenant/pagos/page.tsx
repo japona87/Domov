@@ -60,7 +60,7 @@ export default async function TenantPagosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-heading text-foreground">Mis pagos</h2>
+        <h2 className="text-2xl font-sans font-semibold text-foreground">Mis pagos</h2>
         <div className="flex gap-4 text-sm text-muted-foreground">
           <span><strong className="text-foreground">{paid}</strong> pagados</span>
           <span><strong className="text-destructive">{pending}</strong> pendientes</span>

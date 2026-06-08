@@ -9,6 +9,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { setContractEnding } from '@/lib/actions/contracts'
 import { toast } from 'sonner'
+import { LoadingOverlay } from '@/components/admin/loading-overlay'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 export default function TerminarContratoPage() {
   const params = useParams()
@@ -18,6 +31,7 @@ export default function TerminarContratoPage() {
   const [noticeDate, setNoticeDate] = useState(new Date().toISOString().split('T')[0])
   const [file, setFile] = useState<File | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +44,6 @@ export default function TerminarContratoPage() {
       : null
 
   function handleSubmit() {
-    if (!confirm('¿Registrar la no renovación de este contrato?')) return
     startTransition(async () => {
       try {
         let documentPath: string | null = null
@@ -45,6 +58,7 @@ export default function TerminarContratoPage() {
         }
         await setContractEnding(id, reason, noticeDate, documentPath)
         toast.success('No renovación registrada')
+        setConfirmOpen(false)
         router.push(`/admin/contratos/${id}`)
       } catch {
         toast.error('Error al registrar la no renovación')
@@ -53,7 +67,9 @@ export default function TerminarContratoPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <>
+      <LoadingOverlay pending={isPending} message="Registrando no renovación..." />
+      <div className="space-y-6 max-w-lg">
       <div>
         <p className="text-sm text-slate-500 mb-1">
           <Link href="/admin/contratos" className="hover:underline">Contratos</Link>
@@ -125,14 +141,36 @@ export default function TerminarContratoPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} disabled={isPending}>
-            {isPending ? 'Guardando...' : 'Registrar no renovación'}
-          </Button>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger render={
+              <Button disabled={isPending}>
+                {isPending ? 'Guardando...' : 'Registrar no renovación'}
+              </Button>
+            } />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogMedia>
+                  <img src="/logo-domov.png" alt="Domov" className="h-7 w-auto" />
+                </AlertDialogMedia>
+                <AlertDialogTitle>¿Registrar no renovación?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se registrará la no renovación del contrato. El contrato pasará a estado "por terminar".
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSubmit} disabled={isPending}>
+                  {isPending ? 'Guardando...' : 'Confirmar'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button variant="outline" asChild>
             <Link href={`/admin/contratos/${id}`}>Cancelar</Link>
           </Button>
         </div>
       </div>
     </div>
+    </>
   )
 }

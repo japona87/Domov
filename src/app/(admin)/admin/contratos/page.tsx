@@ -1,19 +1,34 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { DeleteButton } from '@/components/delete-button'
+import { deleteContract } from '@/lib/actions/contracts'
 
 export const dynamic = 'force-dynamic'
 
-const STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  active:    { label: 'Activo',     className: 'bg-green-100 text-green-700' },
-  ending:    { label: 'Terminando', className: 'bg-amber-100 text-amber-700' },
-  ended:     { label: 'Terminado',  className: 'bg-slate-100 text-slate-600' },
-  cancelled: { label: 'Cancelado',  className: 'bg-red-100 text-red-600' },
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+  active:    { label: 'Activo',     className: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950' },
+  ending:    { label: 'Terminando', className: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950' },
+  ended:     { label: 'Terminado',  className: 'text-muted-foreground bg-muted' },
+  cancelled: { label: 'Cancelado',  className: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950' },
 }
 
-export default async function ContratosPage() {
+const TABS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'active', label: 'Activos' },
+  { key: 'ending', label: 'Por terminar' },
+  { key: 'ended', label: 'Finalizados' },
+]
+
+export default async function ContratosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
   const supabase = await createClient()
-  const { data: contracts } = await supabase
+
+  let query = supabase
     .from('contracts')
     .select(`
       id, status, start_date, end_date, monthly_rent,
@@ -22,29 +37,61 @@ export default async function ContratosPage() {
     `)
     .order('created_at', { ascending: false })
 
+  if (tab && tab !== 'all') {
+    if (tab === 'ending') {
+      query = query.eq('status', 'ending')
+    } else if (tab === 'ended') {
+      query = query.eq('status', 'ended')
+    } else if (tab === 'active') {
+      query = query.eq('status', 'active')
+    }
+  }
+
+  const { data: contracts } = await query
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">Contratos</h2>
+        <div>
+          <h2 className="text-2xl font-sans font-semibold text-foreground">Contratos</h2>
+          <p className="text-sm text-muted-foreground mt-1">{contracts?.length ?? 0} contratos registrados</p>
+        </div>
         <Button asChild>
           <Link href="/admin/contratos/nuevo">+ Nuevo contrato</Link>
         </Button>
       </div>
 
+      <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border w-fit">
+        {TABS.map(t => (
+          <Link
+            key={t.key}
+            href={t.key === 'all' ? '/admin/contratos' : `/admin/contratos?tab=${t.key}`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              (tab === t.key || (!tab && t.key === 'all'))
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
       {contracts && contracts.length > 0 ? (
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Inmueble</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Arrendatario</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Vigencia</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Canon</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Estado</th>
-                <th className="px-4 py-3"></th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Inmueble</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Arrendatario</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Vigencia</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Canon</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Estado</th>
+                <th className="px-5 py-3.5"></th>
+                <th className="w-14 px-5 py-3.5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-border">
               {(contracts as unknown as Array<{
                 id: string
                 status: string
@@ -54,29 +101,35 @@ export default async function ContratosPage() {
                 properties: { name: string; address: string } | null
                 tenants: { full_name: string } | null
               }>).map((c) => {
-                const badge = STATUS_LABEL[c.status] ?? { label: c.status, className: 'bg-slate-100 text-slate-600' }
+                const badge = STATUS_STYLES[c.status] ?? { label: c.status, className: 'text-muted-foreground bg-muted' }
                 return (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-800">{c.properties?.name}</p>
-                      <p className="text-xs text-slate-500">{c.properties?.address}</p>
+                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-medium text-foreground">{c.properties?.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{c.properties?.address}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{c.tenants?.full_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
+                    <td className="px-5 py-4 text-foreground">{c.tenants?.full_name ?? '—'}</td>
+                    <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">
                       {c.start_date} → {c.end_date}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                    <td className="px-5 py-4 text-foreground font-medium whitespace-nowrap">
                       ${c.monthly_rent.toLocaleString('es-CO')}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+                    <td className="px-5 py-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                         {badge.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/contratos/${c.id}`} className="text-blue-600 hover:underline text-sm">
-                        Ver
+                    <td className="px-5 py-4 text-right">
+                      <Link
+                        href={`/admin/contratos/${c.id}/editar`}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      >
+                        Editar
                       </Link>
+                    </td>
+                    <td className="px-5 py-4">
+                      <DeleteButton action={deleteContract} id={c.id} />
                     </td>
                   </tr>
                 )
@@ -85,7 +138,11 @@ export default async function ContratosPage() {
           </table>
         </div>
       ) : (
-        <p className="text-slate-400">Sin contratos registrados.</p>
+        <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
+          {tab && tab !== 'all'
+            ? `No hay contratos ${TABS.find(t => t.key === tab)?.label.toLowerCase() ?? tab}.`
+            : 'Sin contratos registrados.'}
+        </div>
       )}
     </div>
   )

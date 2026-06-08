@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { DeleteButton } from '@/components/delete-button'
+import { deleteTenant } from '@/lib/actions/contracts'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,35 +16,45 @@ export default async function ArrendatariosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">Arrendatarios</h2>
+        <div>
+          <h2 className="text-2xl font-sans font-semibold text-foreground">Arrendatarios</h2>
+          <p className="text-sm text-muted-foreground mt-1">{tenants?.length ?? 0} arrendatarios registrados</p>
+        </div>
         <Button asChild>
           <Link href="/admin/arrendatarios/nuevo">+ Nuevo arrendatario</Link>
         </Button>
       </div>
 
       {tenants && tenants.length > 0 ? (
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Cédula</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Teléfono</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Email</th>
-                <th className="px-4 py-3"></th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Nombre</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Cédula</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Teléfono</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Email</th>
+                <th className="px-5 py-3.5"></th>
+                <th className="w-14 px-5 py-3.5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-border">
               {tenants.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{t.full_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{t.document_number ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{t.phone ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{t.email ?? '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/arrendatarios/${t.id}`} className="text-blue-600 hover:underline text-sm">
+                <tr key={t.id} className="hover:bg-muted/50 transition-colors">
+                  <td className="px-5 py-4 font-medium text-foreground">{t.full_name}</td>
+                  <td className="px-5 py-4 text-muted-foreground">{t.document_number ?? '—'}</td>
+                  <td className="px-5 py-4 text-muted-foreground">{t.phone ?? '—'}</td>
+                  <td className="px-5 py-4 text-muted-foreground">{t.email ?? '—'}</td>
+                  <td className="px-5 py-4 text-right">
+                    <Link
+                      href={`/admin/arrendatarios/${t.id}`}
+                      className="text-accent hover:text-accent/80 font-medium text-sm"
+                    >
                       Editar
                     </Link>
+                  </td>
+                  <td className="px-5 py-4">
+                    <DeleteButton action={deleteTenant} id={t.id} />
                   </td>
                 </tr>
               ))}
@@ -50,7 +62,9 @@ export default async function ArrendatariosPage() {
           </table>
         </div>
       ) : (
-        <p className="text-slate-400">Sin arrendatarios registrados.</p>
+        <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
+          Sin arrendatarios registrados.
+        </div>
       )}
     </div>
   )

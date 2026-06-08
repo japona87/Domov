@@ -84,6 +84,10 @@ export async function updateProperty(id: string, formData: FormData) {
 
 export async function deleteProperty(prevState: { error?: string } | undefined, id: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('No autorizado')
   const { data: before } = await supabase.from('properties').select('name').eq('id', id).single()
   const { data: activeContracts } = await supabase
     .from('contracts')
@@ -100,12 +104,27 @@ export async function deleteProperty(prevState: { error?: string } | undefined, 
     .eq('property_id', id)
   if (endedContracts && endedContracts.length > 0) {
     for (const c of endedContracts) {
+      const { data: docs } = await supabase.from('documents').select('file_url').eq('contract_id', c.id)
+      const { data: payments } = await supabase.from('payments').select('receipt_url').eq('contract_id', c.id)
+      const docPaths: string[] = (docs ?? []).map((d) => d.file_url.split('/storage/v1/object/documents/')[1]).filter(Boolean) as string[]
+      const receiptPaths: string[] = (payments ?? []).map((p) => p.receipt_url?.split('/storage/v1/object/receipts/')[1]).filter(Boolean) as string[]
+      if (docPaths.length > 0) await supabase.storage.from('documents').remove(docPaths)
+      if (receiptPaths.length > 0) await supabase.storage.from('receipts').remove(receiptPaths)
+
       await supabase.from('payments').delete().eq('contract_id', c.id)
       await supabase.from('documents').delete().eq('contract_id', c.id)
       await supabase.from('insurance_policies').delete().eq('contract_id', c.id)
     }
     await supabase.from('contracts').delete().eq('property_id', id)
   }
+  const { data: photos } = await supabase.storage
+    .from('property-photos')
+    .list(`${id}/`)
+  if (photos && photos.length > 0) {
+    const photoPaths = photos.map((p) => `${id}/${p.name}`)
+    await supabase.storage.from('property-photos').remove(photoPaths)
+  }
+
   const { error } = await supabase.from('properties').delete().eq('id', id)
   if (error) return { error: error.message }
   await logAudit({ action: 'delete', entity: 'property', entityId: id, entityName: before?.name })

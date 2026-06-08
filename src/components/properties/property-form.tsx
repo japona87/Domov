@@ -10,6 +10,16 @@ import { toast } from 'sonner'
 import { LoadingOverlay } from '@/components/admin/loading-overlay'
 import type { Database, PropertyFeatures } from '@/types/database'
 
+function formatPrice(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  return Number(digits).toLocaleString('es-CO')
+}
+
+function parsePrice(formatted: string): number {
+  return Number(formatted.replace(/\./g, ''))
+}
+
 type Property = Database['public']['Tables']['properties']['Row']
 
 interface FieldConfig {
@@ -45,6 +55,12 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   const [showMapHelp, setShowMapHelp] = useState(false)
   const [mapsUrl, setMapsUrl] = useState((property as (typeof property & { maps_url?: string | null }))?.maps_url ?? '')
   const features = (property?.features ?? {}) as PropertyFeatures
+  const [monthlyPrice, setMonthlyPrice] = useState(
+    property?.monthly_price ? property.monthly_price.toLocaleString('es-CO') : ''
+  )
+  const [adminFee, setAdminFee] = useState(
+    property?.administration_fee ? property.administration_fee.toLocaleString('es-CO') : ''
+  )
 
   const mapsUrlValid = !mapsUrl || mapsUrl.startsWith('https://www.google.com/maps/embed')
 
@@ -53,6 +69,8 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    formData.set('monthly_price', monthlyPrice ? String(parsePrice(monthlyPrice)) : '')
+    formData.set('administration_fee', adminFee ? String(parsePrice(adminFee)) : '')
     startTransition(async () => {
       try {
         await onSubmit(formData)
@@ -268,11 +286,11 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
             <Input
               id="monthly_price"
               name="monthly_price"
-              type="number"
-              min="0"
-              step="1000"
-              defaultValue={property?.monthly_price ?? ''}
-              placeholder="Ej: 1500000"
+              type="text"
+              inputMode="numeric"
+              value={monthlyPrice}
+              onChange={(e) => setMonthlyPrice(formatPrice(e.target.value))}
+              placeholder="Ej: 1.500.000"
             />
           </div>
           <div className="space-y-2">
@@ -280,11 +298,11 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
             <Input
               id="administration_fee"
               name="administration_fee"
-              type="number"
-              min="0"
-              step="1000"
-              defaultValue={property?.administration_fee ?? ''}
-              placeholder="Ej: 250000"
+              type="text"
+              inputMode="numeric"
+              value={adminFee}
+              onChange={(e) => setAdminFee(formatPrice(e.target.value))}
+              placeholder="Ej: 250.000"
             />
           </div>
         </div>

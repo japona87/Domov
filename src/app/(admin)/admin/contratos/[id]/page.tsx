@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { PaymentRegister } from '@/components/contracts/payment-register'
 import { ContractActions } from '@/components/contracts/contract-actions'
+import { getContractAmendments } from '@/lib/actions/contract-amendments'
+import { AmendmentForm } from '@/components/contracts/amendment-form'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,12 +12,6 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   ending:    { label: 'Terminando', className: 'bg-amber-100 text-amber-700' },
   ended:     { label: 'Terminado',  className: 'bg-slate-100 text-slate-600' },
   cancelled: { label: 'Cancelado',  className: 'bg-red-100 text-red-600' },
-}
-
-const PAYMENT_STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Pendiente', className: 'bg-amber-100 text-amber-700' },
-  paid:    { label: 'Pagado',    className: 'bg-green-100 text-green-700' },
-  overdue: { label: 'Vencido',   className: 'bg-red-100 text-red-600' },
 }
 
 export default async function ContratoDetailPage({
@@ -40,22 +35,6 @@ export default async function ContratoDetailPage({
 
   if (!contract) notFound()
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('id, amount, due_date, paid_date, status, receipt_url, notes')
-    .eq('contract_id', id)
-    .order('due_date')
-
-  const paymentsWithSignedUrls = await Promise.all(
-    (payments ?? []).map(async (p) => {
-      if (!p.receipt_url) return { ...p, signedReceiptUrl: null }
-      const urlPath = p.receipt_url.split('/storage/v1/object/receipts/')[1]
-      if (!urlPath) return { ...p, signedReceiptUrl: null }
-      const { data } = await supabase.storage.from('receipts').createSignedUrl(urlPath, 3600)
-      return { ...p, signedReceiptUrl: data?.signedUrl ?? null }
-    })
-  )
-
   const c = contract as unknown as {
     id: string
     status: string
@@ -78,7 +57,20 @@ export default async function ContratoDetailPage({
     } | null
   }
 
+  const amendments = await getContractAmendments(id)
   const badge = STATUS_LABEL[c.status] ?? { label: c.status, className: 'bg-slate-100 text-slate-600' }
+
+  const totalAmendments = amendments.length
+  const yearsTenure = (() => {
+    if (amendments.length > 0) {
+      const first = new Date(amendments[0].period_start + 'T00:00:00')
+      const last = amendments[amendments.length - 1].period_end
+      return Math.round((new Date(last + 'T00:00:00').getTime() - first.getTime()) / 365.25 / 86400000 * 10) / 10
+    }
+    const start = new Date(c.start_date + 'T00:00:00')
+    const end = new Date(c.end_date + 'T00:00:00')
+    return Math.round((end.getTime() - start.getTime()) / 365.25 / 86400000 * 10) / 10
+  })()
 
   return (
     <div className="space-y-8">
@@ -93,7 +85,15 @@ export default async function ContratoDetailPage({
             {badge.label}
           </span>
         </div>
-        <ContractActions contractId={id} status={c.status} />
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/contratos/${id}/editar`}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground"
+          >
+            Editar
+          </Link>
+          <ContractActions contractId={id} status={c.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6 bg-white rounded-lg border p-6">
@@ -131,7 +131,7 @@ export default async function ContratoDetailPage({
         {c.notes && (
           <div className="col-span-2">
             <p className="text-xs text-slate-500 mb-0.5">Notas</p>
-            <p className="text-sm text-slate-700">{c.notes}</p>
+            <p className="text-sm text-slate-700 whitespace-pre-line">{c.notes}</p>
           </div>
         )}
         {c.termination_notice_date && (
@@ -158,61 +158,76 @@ export default async function ContratoDetailPage({
         )}
       </div>
 
+      {/* Amendments timeline */}
       <div className="bg-white rounded-lg border p-6 space-y-4">
-        <h3 className="font-semibold text-slate-800">Calendario de pagos</h3>
-        {paymentsWithSignedUrls.length > 0 ? (
-          <div className="space-y-2">
-            {paymentsWithSignedUrls.map((p) => {
-              const pb =
-                PAYMENT_STATUS_LABEL[p.status] ?? {
-                  label: p.status,
-                  className: 'bg-slate-100 text-slate-600',
-                }
-              return (
-                <div key={p.id} className="border rounded-md px-4 py-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{p.due_date}</p>
-                      <p className="text-xs text-slate-500">${p.amount.toLocaleString('es-CO')}</p>
-                      {p.paid_date && (
-                        <p className="text-xs text-green-600">Pagado: {p.paid_date}</p>
-                      )}
-                      {p.notes && <p className="text-xs text-slate-400">{p.notes}</p>}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${pb.className}`}
-                      >
-                        {pb.label}
-                      </span>
-                      {p.signedReceiptUrl && (
-                        <a
-                          href={p.signedReceiptUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline text-xs"
-                        >
-                          Ver comprobante
-                        </a>
-                      )}
-                      {p.status !== 'paid' && c.status === 'active' && (
-                        <PaymentRegister
-                          paymentId={p.id}
-                          contractId={id}
-                          dueDate={p.due_date}
-                          amount={p.amount}
-                        />
-                      )}
-                    </div>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800">Trazabilidad de enmiendas</h3>
+          <p className="text-xs text-slate-500">
+            {totalAmendments} enmienda{totalAmendments !== 1 ? 's' : ''} · {yearsTenure} años de antigüedad
+          </p>
+        </div>
+        <div className="space-y-0">
+          {amendments.length > 0 ? (
+            <>
+              {amendments.map((a, i) => (
+                <div key={a.id} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full mt-1.5 ${i === 0 ? 'bg-green-600' : 'bg-blue-600'}`} />
+                    {i < amendments.length - 1 && <div className="w-0.5 flex-1 bg-blue-200" />}
+                  </div>
+                  <div className="pb-6">
+                    <p className="text-sm font-medium text-slate-800">
+                      {i === 0 ? 'Contrato original' : `Enmienda #${a.amendment_number}`}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {a.amendment_date && i > 0 ? `${a.amendment_date} · ` : ''}
+                      {a.period_start} → {a.period_end}
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      ${a.monthly_rent.toLocaleString('es-CO')} + $
+                      {a.administration_fee.toLocaleString('es-CO')} admón
+                      {a.ipc_rate != null && ` · IPC ${a.ipc_rate}%`}
+                      {a.admin_fee_increase_pct != null && ` · Admin +${a.admin_fee_increase_pct}%`}
+                    </p>
+                    {a.notes && <p className="text-xs text-slate-400 mt-0.5">{a.notes}</p>}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="text-slate-400 text-sm">Sin pagos registrados.</p>
-        )}
+              ))}
+            </>
+          ) : (
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-3 h-3 rounded-full bg-green-600 mt-1.5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-800">Contrato original</p>
+                <p className="text-xs text-slate-500">{c.start_date} → {c.end_date}</p>
+                <p className="text-xs text-slate-600">
+                  ${c.monthly_rent.toLocaleString('es-CO')}{c.administration_fee != null ? ` + $${c.administration_fee.toLocaleString('es-CO')} admón` : ''}
+                  {c.ipc_rate != null && ` · IPC ${c.ipc_rate}%`}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Crear enmienda */}
+      {c.status === 'active' || c.status === 'ending' ? (
+        <details className="bg-white rounded-lg border p-6">
+          <summary className="cursor-pointer font-semibold text-slate-800 hover:text-blue-600 text-sm">
+            + Crear nueva enmienda
+          </summary>
+          <div className="mt-4">
+            <AmendmentForm
+              contractId={c.id}
+              currentRent={c.monthly_rent}
+              currentAdminFee={c.administration_fee ?? 0}
+              currentEndDate={c.end_date}
+            />
+          </div>
+        </details>
+      ) : null}
     </div>
   )
 }

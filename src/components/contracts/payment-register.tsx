@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { markPaymentPaid } from '@/lib/actions/contracts'
 import { toast } from 'sonner'
+import { LoadingOverlay } from '@/components/admin/loading-overlay'
 
 interface PaymentRegisterProps {
   paymentId: string
@@ -51,17 +52,22 @@ export function PaymentRegister({ paymentId, contractId, dueDate, amount }: Paym
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="text-green-600 hover:text-green-800 text-sm font-medium"
-      >
-        Registrar pago
-      </button>
+      <>
+        <LoadingOverlay pending={isPending} message="Registrando pago..." />
+        <button
+          onClick={() => setOpen(true)}
+          className="text-green-600 hover:text-green-800 text-sm font-medium"
+        >
+          Registrar pago
+        </button>
+      </>
     )
   }
 
   return (
-    <div className="border rounded-lg p-4 bg-green-50 space-y-3 mt-2">
+    <>
+      <LoadingOverlay pending={isPending} message="Registrando pago..." />
+      <div className="border rounded-lg p-4 bg-green-50 space-y-3 mt-2">
       <p className="text-sm font-medium text-slate-700">
         Registrar pago — Cuota {dueDate} (${amount.toLocaleString('es-CO')})
       </p>
@@ -90,6 +96,7 @@ export function PaymentRegister({ paymentId, contractId, dueDate, amount }: Paym
           Cancelar
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

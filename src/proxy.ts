@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
         .select('role')
         .eq('id', user.id)
         .single()
-      const redirectTo = profile?.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard'
+      const redirectTo = profile?.role === 'admin' ? '/admin/dashboard' : profile?.role === 'owner' ? '/owner/dashboard' : '/tenant/dashboard'
       return NextResponse.redirect(new URL(redirectTo, request.url))
     }
     return supabaseResponse
@@ -53,11 +53,17 @@ export async function proxy(request: NextRequest) {
 
   // Proteger rutas /admin — solo admins
   if (pathname.startsWith('/admin') && profile?.role !== 'admin') {
-    return NextResponse.redirect(new URL('/tenant/dashboard', request.url))
+    const fallback = profile?.role === 'tenant' ? '/tenant/dashboard' : '/owner/dashboard'
+    return NextResponse.redirect(new URL(fallback, request.url))
   }
 
-  // Proteger rutas /tenant — solo tenants (o admin que accede por error)
+  // Proteger rutas /tenant — solo tenants
   if (pathname.startsWith('/tenant') && profile?.role !== 'tenant') {
+    return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+  }
+
+  // Proteger rutas /owner — solo owners
+  if (pathname.startsWith('/owner') && profile?.role !== 'owner') {
     return NextResponse.redirect(new URL('/admin/dashboard', request.url))
   }
 
@@ -65,5 +71,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/admin/:path*', '/tenant/:path*', '/owner/:path*', '/login'],
 }

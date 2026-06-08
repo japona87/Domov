@@ -33,7 +33,7 @@ export default async function FotosPropiedadPage({
           <Link href={`/admin/propiedades/${id}`} className="hover:underline">{property.name}</Link>
           {' / '}Fotos
         </p>
-        <h2 className="text-2xl font-heading text-foreground">Fotos del inmueble</h2>
+        <h2 className="text-2xl font-sans font-semibold text-foreground">Fotos del inmueble</h2>
         <p className="text-sm text-muted-foreground mt-1">
           {photos?.length ?? 0} foto{(photos?.length ?? 0) !== 1 ? 's' : ''} · La foto de portada aparece en la página pública
         </p>

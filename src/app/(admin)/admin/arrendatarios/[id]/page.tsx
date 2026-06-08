@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { TenantForm } from '@/components/tenants/tenant-form'
 import { updateTenant } from '@/lib/actions/contracts'
-import { InviteButton } from '@/components/tenants/invite-button'
+import { TenantOnboardingButton, TenantPasswordManager } from '@/components/tenants/tenant-onboarding'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,18 +30,28 @@ export default async function EditarArrendatarioPage({
         <p className="text-sm text-muted-foreground mb-1">
           <Link href="/admin/arrendatarios" className="hover:underline">Arrendatarios</Link> / Editar
         </p>
-        <h2 className="text-2xl font-heading text-foreground">{tenant.full_name}</h2>
+        <h2 className="text-2xl font-sans font-semibold text-foreground">{tenant.full_name}</h2>
       </div>
-      <div className="bg-card rounded-xl border border-border p-6">
+      <div className="bg-card rounded-xl border border-border p-6 space-y-6">
         <TenantForm tenant={tenant} onSubmit={updateWithId} />
-      </div>
-      <div className="bg-card rounded-xl border border-border p-6 max-w-lg space-y-3">
-        <h3 className="font-medium text-foreground">Acceso al portal</h3>
-        <InviteButton
-          tenantId={id}
-          email={tenant.email ?? null}
-          hasUserId={!!tenant.user_id}
-        />
+
+        {tenant.email && (
+          <>
+            <hr className="border-border" />
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground">Acceso al portal</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {tenant.user_id
+                    ? `Ya tiene acceso al portal (${tenant.email})`
+                    : 'El arrendatario aún no tiene acceso. Envíale un onboarding.'}
+                </p>
+              </div>
+              <TenantOnboardingButton tenantId={id} hasAccess={!!tenant.user_id} />
+            </div>
+            <TenantPasswordManager tenantId={id} hasAccess={!!tenant.user_id} />
+          </>
+        )}
       </div>
     </div>
   )

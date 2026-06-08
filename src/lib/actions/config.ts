@@ -35,10 +35,14 @@ export async function updateSystemConfig(formData: FormData) {
   const auditDays = formData.get('audit_retention_days')
   const hasAuditDays = auditDays && String(auditDays) !== ''
 
+  const storageLimit = formData.get('storage_limit_gb')
+  const hasStorageLimit = storageLimit && String(storageLimit) !== ''
+
   const values = {
     year: currentYear,
     renewal_notice_days: formData.get('renewal_notice_days') ? Number(formData.get('renewal_notice_days')) : 120,
     ...(hasAuditDays ? { audit_retention_days: Number(auditDays) } : {}),
+    ...(hasStorageLimit ? { storage_limit_gb: Number(storageLimit) } : {}),
     updated_at: new Date().toISOString(),
   }
   const { error } = await supabase.from('system_config').upsert(values, { onConflict: 'year' })

@@ -1,12 +1,19 @@
-// src/components/properties/owners-manager.tsx
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { addPropertyOwner, removePropertyOwner, updateOwner } from '@/lib/actions/properties'
+import { linkOwnerToProperty, unlinkOwnerFromProperty, updateOwnershipPct } from '@/lib/actions/property-owners'
+import { getOwners } from '@/lib/actions/owners'
 import { toast } from 'sonner'
+import { LoadingOverlay } from '@/components/admin/loading-overlay'
+
+interface OwnerOption {
+  id: string
+  full_name: string
+}
 
 interface PropertyOwner {
   id: string
@@ -25,315 +32,190 @@ interface OwnersManagerProps {
   owners: PropertyOwner[]
 }
 
-type FormState = { fullName: string; documentNumber: string; phone: string; email: string; ownershipPct: string }
-
-const EMPTY_FORM: FormState = { fullName: '', documentNumber: '', phone: '', email: '', ownershipPct: '100' }
-
-// ── Validaciones ──────────────────────────────────────────────────────────────
-
-function emailError(val: string): string | null {
-  if (!val) return null
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ? null : 'Formato inválido (ej: juan@correo.com)'
-}
-
-function documentError(val: string): string | null {
-  if (!val) return null
-  return /^\d+$/.test(val) ? null : 'Solo se permiten números'
-}
-
-function phoneError(val: string): string | null {
-  if (!val) return null
-  return /^\d+$/.test(val) ? null : 'Solo se permiten números'
-}
-
-function formHasErrors(form: FormState, pctMax: number): boolean {
-  const pct = Number(form.ownershipPct)
-  return (
-    !form.fullName.trim() ||
-    !!emailError(form.email) ||
-    !!documentError(form.documentNumber) ||
-    !!phoneError(form.phone) ||
-    pct <= 0 ||
-    pct > pctMax
-  )
-}
-
-// ── Sub-componente de campo con error inline ──────────────────────────────────
-
-function Field({
-  label, value, onChange, placeholder, type = 'text', error,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  type?: string
-  error?: string | null
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs">{label}</Label>
-      <Input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={error ? 'border-red-400 focus-visible:ring-red-400' : ''}
-      />
-      {error && <p className="text-xs text-red-500">{error}</p>}
-    </div>
-  )
-}
-
-// ── Formulario reutilizable (agregar / editar) ────────────────────────────────
-
-function OwnerForm({
-  title,
-  form,
-  onChange,
-  onSubmit,
-  onCancel,
-  isPending,
-  pctMax,
-  submitLabel,
-}: {
-  title: string
-  form: FormState
-  onChange: (f: FormState) => void
-  onSubmit: () => void
-  onCancel: () => void
-  isPending: boolean
-  pctMax: number
-  submitLabel: string
-}) {
-  const pct = Number(form.ownershipPct)
-  const pctOver = pct > pctMax
-  const hasErrors = formHasErrors(form, pctMax)
-
-  return (
-    <div className="border rounded-lg p-4 space-y-3 bg-slate-50">
-      <h4 className="font-medium text-slate-700 text-sm">{title}</h4>
-      <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Nombre completo *"
-          value={form.fullName}
-          onChange={(v) => onChange({ ...form, fullName: v })}
-          placeholder="Juan Pérez"
-          error={form.fullName.trim() === '' && form.fullName !== '' ? 'Requerido' : null}
-        />
-        <Field
-          label="Cédula"
-          value={form.documentNumber}
-          onChange={(v) => onChange({ ...form, documentNumber: v })}
-          placeholder="12345678"
-          error={documentError(form.documentNumber)}
-        />
-        <Field
-          label="Teléfono"
-          value={form.phone}
-          onChange={(v) => onChange({ ...form, phone: v })}
-          placeholder="3001234567"
-          error={phoneError(form.phone)}
-        />
-        <Field
-          label="Email"
-          value={form.email}
-          onChange={(v) => onChange({ ...form, email: v })}
-          placeholder="juan@ejemplo.com"
-          error={emailError(form.email)}
-        />
-        <div className="space-y-1">
-          <Label className="text-xs">% de propiedad *</Label>
-          <Input
-            type="number"
-            min="1"
-            max={pctMax}
-            value={form.ownershipPct}
-            onChange={(e) => onChange({ ...form, ownershipPct: e.target.value })}
-            className={pctOver ? 'border-red-400 focus-visible:ring-red-400' : ''}
-          />
-          {pctOver && (
-            <p className="text-xs text-red-500">
-              Supera el límite — máximo disponible: {pctMax}%
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={onSubmit} disabled={isPending || hasErrors}>
-          {isPending ? 'Guardando...' : submitLabel}
-        </Button>
-        <Button size="sm" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ── Componente principal ──────────────────────────────────────────────────────
-
 export function OwnersManager({ propertyId, owners }: OwnersManagerProps) {
   const [isPending, startTransition] = useTransition()
   const [showAddForm, setShowAddForm] = useState(false)
-  const [addForm, setAddForm] = useState<FormState>(EMPTY_FORM)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM)
+  const [allOwners, setAllOwners] = useState<OwnerOption[]>([])
+  const [loadingOwners, setLoadingOwners] = useState(false)
+  const [selectedOwnerId, setSelectedOwnerId] = useState('')
+  const [newPct, setNewPct] = useState('100')
+  const [editingPct, setEditingPct] = useState<string | null>(null)
+  const [editPctValue, setEditPctValue] = useState('')
 
   const totalPct = owners.reduce((sum, o) => sum + o.ownership_pct, 0)
+  const linkedOwnerIds = new Set(owners.map((o) => o.owners?.id).filter(Boolean))
 
-  function startEdit(o: PropertyOwner) {
-    setEditingId(o.id)
-    setEditForm({
-      fullName: o.owners?.full_name ?? '',
-      documentNumber: o.owners?.document_number ?? '',
-      phone: o.owners?.phone ?? '',
-      email: o.owners?.email ?? '',
-      ownershipPct: String(o.ownership_pct),
-    })
-    setShowAddForm(false)
-  }
+  useEffect(() => {
+    if (showAddForm && allOwners.length === 0) {
+      setLoadingOwners(true)
+      getOwners().then((result) => {
+        setAllOwners(result.filter((r) => !linkedOwnerIds.has(r.id)))
+        setLoadingOwners(false)
+      })
+    }
+  }, [showAddForm])
 
-  function cancelEdit() {
-    setEditingId(null)
-    setEditForm(EMPTY_FORM)
-  }
-
-  function handleAdd() {
+  function handleLink() {
+    if (!selectedOwnerId) return
     startTransition(async () => {
-      try {
-        await addPropertyOwner(
-          propertyId,
-          addForm.fullName,
-          addForm.documentNumber,
-          addForm.phone,
-          addForm.email,
-          Number(addForm.ownershipPct)
-        )
-        setAddForm(EMPTY_FORM)
+      const result = await linkOwnerToProperty(propertyId, selectedOwnerId, Number(newPct) || 100)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Propietario vinculado')
         setShowAddForm(false)
-        toast.success('Propietario agregado')
-      } catch {
-        toast.error('Error al agregar propietario')
+        setSelectedOwnerId('')
+        setNewPct('100')
       }
     })
   }
 
-  function handleUpdate(o: PropertyOwner) {
-    if (!o.owners) return
+  function handleUnlink(propertyOwnerId: string) {
     startTransition(async () => {
-      try {
-        await updateOwner(
-          o.owners!.id,
-          o.id,
-          propertyId,
-          editForm.fullName,
-          editForm.documentNumber,
-          editForm.phone,
-          editForm.email,
-          Number(editForm.ownershipPct)
-        )
-        setEditingId(null)
-        toast.success('Propietario actualizado')
-      } catch {
-        toast.error('Error al actualizar propietario')
+      const result = await unlinkOwnerFromProperty(propertyOwnerId, propertyId)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Propietario desvinculado')
       }
     })
   }
 
-  function handleRemove(propertyOwnerId: string) {
+  function handleUpdatePct(propertyOwnerId: string) {
     startTransition(async () => {
-      try {
-        await removePropertyOwner(propertyOwnerId, propertyId)
-        toast.success('Propietario removido')
-      } catch {
-        toast.error('Error al remover propietario')
+      const result = await updateOwnershipPct(propertyOwnerId, propertyId, Number(editPctValue))
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Porcentaje actualizado')
+        setEditingPct(null)
       }
     })
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <LoadingOverlay pending={isPending} message="Actualizando propietarios..." />
+      <div className="space-y-4">
       {owners.length > 0 ? (
         <div className="space-y-2">
-          {owners.map((o) => {
-            const isEditing = editingId === o.id
-            // Al editar, el máximo disponible = 100 - total + lo que ya tenía este propietario
-            const pctMax = isEditing
-              ? 100 - totalPct + o.ownership_pct
-              : 100 - totalPct
-
-            return isEditing ? (
-              <OwnerForm
-                key={o.id}
-                title="Editar propietario"
-                form={editForm}
-                onChange={setEditForm}
-                onSubmit={() => handleUpdate(o)}
-                onCancel={cancelEdit}
-                isPending={isPending}
-                pctMax={pctMax}
-                submitLabel="Guardar cambios"
-              />
-            ) : (
-              <div key={o.id} className="flex items-center justify-between bg-slate-50 rounded-md px-4 py-3">
-                <div>
-                  <p className="font-medium text-slate-800">{o.owners?.full_name}</p>
-                  <div className="flex gap-3 text-xs text-slate-500 mt-0.5">
-                    {o.owners?.document_number && <span>CC: {o.owners.document_number}</span>}
-                    {o.owners?.phone && <span>{o.owners.phone}</span>}
-                    {o.owners?.email && <span>{o.owners.email}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-700">{o.ownership_pct}%</span>
-                  <button
-                    onClick={() => startEdit(o)}
-                    disabled={isPending || editingId !== null}
-                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleRemove(o.id)}
-                    disabled={isPending || editingId !== null}
-                    className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50"
-                  >
-                    Remover
-                  </button>
+          {owners.map((o) => (
+            <div key={o.id} className="flex items-center justify-between bg-muted/50 rounded-md px-4 py-3">
+              <div>
+                {o.owners ? (
+                  <Link href={`/admin/propietarios/${o.owners.id}`} className="font-medium text-foreground hover:text-accent transition-colors">
+                    {o.owners.full_name}
+                  </Link>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Propietario eliminado</p>
+                )}
+                <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
+                  {o.owners?.document_number && <span>CC: {o.owners.document_number}</span>}
+                  {o.owners?.phone && <span>{o.owners.phone}</span>}
                 </div>
               </div>
-            )
-          })}
-          <p className="text-xs text-slate-400 text-right">Total asignado: {totalPct}%</p>
+              <div className="flex items-center gap-3">
+                {editingPct === o.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={editPctValue}
+                      onChange={(e) => setEditPctValue(e.target.value)}
+                      className="w-20 h-8 text-sm"
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => handleUpdatePct(o.id)} disabled={isPending}>
+                      OK
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingPct(null)}>
+                      X
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setEditingPct(o.id); setEditPctValue(String(o.ownership_pct)) }}
+                      className="text-sm font-semibold text-foreground hover:text-accent transition-colors"
+                    >
+                      {o.ownership_pct}%
+                    </button>
+                    <button
+                      onClick={() => handleUnlink(o.id)}
+                      disabled={isPending}
+                      className="text-xs text-destructive hover:text-destructive/80 font-medium disabled:opacity-50"
+                    >
+                      Desvincular
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground text-right">Total asignado: {totalPct}%</p>
         </div>
       ) : (
-        <p className="text-slate-400 text-sm">Sin propietarios registrados.</p>
+        <p className="text-sm text-muted-foreground">Sin propietarios vinculados.</p>
       )}
 
-      {!showAddForm && editingId === null && (
+      {!showAddForm && (
         <Button
           variant="outline"
           size="sm"
           onClick={() => setShowAddForm(true)}
           disabled={totalPct >= 100}
         >
-          + Agregar propietario
+          + Vincular propietario
         </Button>
       )}
 
       {showAddForm && (
-        <OwnerForm
-          title="Nuevo propietario"
-          form={addForm}
-          onChange={setAddForm}
-          onSubmit={handleAdd}
-          onCancel={() => { setShowAddForm(false); setAddForm(EMPTY_FORM) }}
-          isPending={isPending}
-          pctMax={100 - totalPct}
-          submitLabel="Agregar"
-        />
+        <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+          <h4 className="font-medium text-foreground text-sm">Vincular propietario existente</h4>
+
+          <div className="space-y-1">
+            <Label className="text-xs">Seleccionar propietario</Label>
+            <select
+              value={selectedOwnerId}
+              onChange={(e) => setSelectedOwnerId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">-- Seleccionar propietario --</option>
+              {loadingOwners ? (
+                <option value="" disabled>Cargando...</option>
+              ) : (
+                allOwners.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.full_name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs">% de propiedad</Label>
+            <Input
+              type="number"
+              min="1"
+              max={100 - totalPct}
+              value={newPct}
+              onChange={(e) => setNewPct(e.target.value)}
+              className="w-24"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleLink} disabled={isPending || !selectedOwnerId}>
+              {isPending ? 'Vinculando...' : 'Vincular'}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setShowAddForm(false); setSelectedOwnerId(''); setNewPct('100') }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
       )}
     </div>
+    </>
   )
 }

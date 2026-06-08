@@ -1,19 +1,19 @@
 import type { Metadata } from 'next'
-import { DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { Plus_Jakarta_Sans, DM_Serif_Display } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const dmSans = DM_Sans({
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: '--font-sans',
   subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800'],
 })
 
-const dmSerifDisplay = DM_Serif_Display({
-  subsets: ['latin'],
-  weight: '400',
+const dmSerif = DM_Serif_Display({
   variable: '--font-heading',
-  display: 'swap',
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['normal', 'italic'],
 })
 
 export const metadata: Metadata = {
@@ -27,10 +27,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${dmSans.variable} ${dmSerifDisplay.variable}`}>
-      <body className="antialiased">
+    <html lang="es" suppressHydrationWarning>
+      <body
+        className={`${plusJakarta.variable} ${dmSerif.variable} antialiased`}
+        suppressHydrationWarning
+      >
         {children}
-        <Toaster richColors />
+        <Toaster />
       </body>
     </html>
   )

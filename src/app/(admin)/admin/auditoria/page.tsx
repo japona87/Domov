@@ -45,14 +45,12 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-heading text-foreground">Auditoría</h2>
+          <h2 className="text-2xl font-sans font-semibold text-foreground">Auditoría</h2>
           <p className="text-sm text-muted-foreground mt-1">{count ?? 0} eventos registrados</p>
         </div>
         <div className="flex items-center gap-3">
           <p className="text-xs text-muted-foreground">Retención: {retentionDays} días</p>
-          <form action={cleanupAuditLogs}>
             <CleanupButton retentionDays={retentionDays} />
-          </form>
         </div>
       </div>
 

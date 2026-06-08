@@ -2,7 +2,7 @@ import type { Json, PropertyFeatures } from '@/types/database'
 import { createClient } from '@/lib/supabase/server'
 
 type AuditAction = 'create' | 'update' | 'delete'
-type AuditEntity = 'property' | 'owner' | 'tenant' | 'contract' | 'property_owner' | 'payment' | 'feature_config' | 'property_photo' | 'system_config'
+type AuditEntity = 'property' | 'owner' | 'tenant' | 'contract' | 'property_owner' | 'payment' | 'feature_config' | 'property_photo' | 'system_config' | 'document'
 
 export async function logAudit(params: {
   action: AuditAction
