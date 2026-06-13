@@ -43,3 +43,6 @@ next-env.d.ts
 .gstack/
 tmp-research2/
 design-mock/
+
+# design mockup reference
+/DomovClaudeDesing/

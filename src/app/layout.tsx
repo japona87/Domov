@@ -1,19 +1,18 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, DM_Serif_Display } from 'next/font/google'
+import { Marcellus, Jost } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const plusJakarta = Plus_Jakarta_Sans({
+const jost = Jost({
   variable: '--font-sans',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['300', '400', '500', '600', '700'],
 })
 
-const dmSerif = DM_Serif_Display({
+const marcellus = Marcellus({
   variable: '--font-heading',
   subsets: ['latin'],
   weight: ['400'],
-  style: ['normal', 'italic'],
 })
 
 export const metadata: Metadata = {
@@ -29,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${plusJakarta.variable} ${dmSerif.variable} antialiased`}
+        className={`${jost.variable} ${marcellus.variable} antialiased`}
         suppressHydrationWarning
       >
         {children}

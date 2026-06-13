@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { PropertyFeatures } from '@/types/database'
 import { PropertyGallery } from './PropertyGallery'
 import { PropertyStats } from '@/components/properties/property-stats'
-import { BedDouble, Bath, MoveDiagonal, Car, Layers, Star } from 'lucide-react'
+import { TrustStrip } from '@/components/landing/trust-strip'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
 export const revalidate = 300
 
@@ -85,8 +86,10 @@ export default async function PropiedadDetallePage({
         </div>
       </nav>
 
+      <TrustStrip />
+
       {/* Breadcrumb */}
-      <div className="bg-navy-900 mt-4">
+      <div className="bg-[#0F172A] mt-4">
         <div className="max-w-5xl mx-auto px-6 py-3.5">
           <p className="text-xs flex items-center gap-1.5">
             <Link href="/propiedades" className="text-accent hover:text-accent/80 transition-colors font-semibold">
@@ -106,32 +109,37 @@ export default async function PropiedadDetallePage({
           <div className="md:col-span-2 space-y-12">
 
             {property.description && (
-              <div>
-                <h2 className="font-heading text-2xl text-foreground mb-3">Descripción</h2>
-                <div className="w-10 h-0.5 bg-accent mb-5" />
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{property.description}</p>
-              </div>
+              <ScrollReveal>
+                <div>
+                  <h2 className="font-heading text-2xl text-[#0F172A] mb-3">Descripción</h2>
+                  <div className="w-10 h-0.5 bg-accent mb-5" />
+                  <p className="text-slate-500 leading-relaxed whitespace-pre-line">{property.description}</p>
+                </div>
+              </ScrollReveal>
             )}
 
             {(() => {
               const statsItems = [
-                features.bedrooms !== undefined && { icon: <BedDouble size={20} />, label: 'Dormitorios', value: String(features.bedrooms) },
-                features.bathrooms !== undefined && { icon: <Bath size={20} />, label: 'Baños', value: String(features.bathrooms) },
-                features.area_sqm !== undefined && { icon: <MoveDiagonal size={20} />, label: 'Área', value: `${features.area_sqm} m²` },
-                features.parking_spots !== undefined && { icon: <Car size={20} />, label: 'Parqueadero', value: String(features.parking_spots) },
-                features.floor !== undefined && { icon: <Layers size={20} />, label: features.total_floors ? `Piso / ${features.total_floors}` : 'Piso', value: String(features.floor) },
-                features.estrato !== undefined && { icon: <Star size={20} />, label: 'Estrato', value: String(features.estrato) },
+                features.bedrooms !== undefined && { icon: <BedIcon />, label: 'Dormitorios', value: String(features.bedrooms) },
+                features.bathrooms !== undefined && { icon: <BathIcon />, label: 'Baños', value: String(features.bathrooms) },
+                features.area_sqm !== undefined && { icon: <AreaIcon />, label: 'Área', value: `${features.area_sqm} m²` },
+                features.parking_spots !== undefined && { icon: <CarIcon />, label: 'Parqueadero', value: String(features.parking_spots) },
+                features.floor !== undefined && { icon: <FloorIcon />, label: features.total_floors ? `Piso / ${features.total_floors}` : 'Piso', value: String(features.floor) },
+                features.estrato !== undefined && { icon: <StarIcon />, label: 'Estrato', value: String(features.estrato) },
               ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string }[]
 
               if (statsItems.length === 0) return null
               return <PropertyStats items={statsItems} />
             })()}
 
-            <PropertyGallery photos={photos} propertyName={property.name} />
+            <ScrollReveal>
+              <PropertyGallery photos={photos} propertyName={property.name} />
+            </ScrollReveal>
 
             {extraFeatures.length > 0 && (
+              <ScrollReveal>
               <div>
-                <h2 className="font-heading text-2xl text-foreground mb-3">Comodidades</h2>
+                <h2 className="font-heading text-2xl text-[#0F172A] mb-3">Comodidades</h2>
                 <div className="w-10 h-0.5 bg-accent mb-5" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {extraFeatures.map(([key, value]) => (
@@ -149,13 +157,15 @@ export default async function PropiedadDetallePage({
                     ))}
                   </div>
                 </div>
-              )}
+              </ScrollReveal>
+            )}
 
             {property.maps_url && property.maps_url.startsWith('https://www.google.com/maps/embed') && (
+              <ScrollReveal>
               <div>
-                <h2 className="font-heading text-2xl text-foreground mb-3">Ubicación</h2>
+                <h2 className="font-heading text-2xl text-[#0F172A] mb-3">Ubicación</h2>
                 <div className="w-10 h-0.5 bg-accent mb-5" />
-                <div className="rounded-2xl overflow-hidden border border-border aspect-video shadow-sm">
+                <div className="rounded-2xl overflow-hidden border border-[#E2E8F0] aspect-video shadow-sm">
                   <iframe
                     src={property.maps_url}
                     width="100%"
@@ -168,29 +178,30 @@ export default async function PropiedadDetallePage({
                   />
                 </div>
               </div>
+              </ScrollReveal>
             )}
           </div>
 
           {/* Sidebar */}
           <div>
-            <div className="rounded-2xl overflow-hidden border border-border shadow-sm sticky top-24">
+            <div className="rounded-2xl overflow-hidden border border-[#E2E8F0] shadow-sm sticky top-24">
               {/* Price header */}
-              <div className="bg-white px-6 pt-6 pb-5 border-b border-border">
-                <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Arriendo mensual</p>
+              <div className="bg-white px-6 pt-6 pb-5 border-b border-[#E2E8F0]">
+                <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Arriendo mensual</p>
                 {property.monthly_price ? (
                   <>
-                    <p className="text-foreground text-3xl font-bold leading-none">
+                    <p className="text-[#0F172A] text-3xl font-bold leading-none">
                       ${property.monthly_price.toLocaleString('es-CO')}
-                      <span className="text-sm font-normal text-muted-foreground ml-1">/mes</span>
+                      <span className="text-sm font-normal text-slate-400 ml-1">/mes</span>
                     </p>
                     {property.administration_fee && (
-                      <p className="text-muted-foreground text-xs mt-1.5">
+                      <p className="text-slate-400 text-xs mt-1.5">
                         + ${property.administration_fee.toLocaleString('es-CO')} administración
                       </p>
                     )}
                   </>
                 ) : (
-                  <p className="text-foreground text-lg">Precio a convenir</p>
+                  <p className="text-[#0F172A] text-lg">Precio a convenir</p>
                 )}
               </div>
 
@@ -199,12 +210,12 @@ export default async function PropiedadDetallePage({
 
                 <Link
                   href="/propiedades"
-                  className="flex items-center justify-center gap-2 w-full bg-accent text-navy-900 font-bold text-base rounded-xl py-4 hover:bg-accent/90 transition-colors shadow-sm"
+                  className="flex items-center justify-center gap-2 w-full bg-[#0F172A] text-white font-bold text-base rounded-xl py-4 hover:bg-[#1e293b] transition-colors shadow-sm"
                 >
                   ← Ver más propiedades
                 </Link>
 
-                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                <p className="text-xs text-slate-400 text-center leading-relaxed">
                   Domov Soluciones Inmobiliarias — gestión profesional en Colombia
                 </p>
               </div>
@@ -213,9 +224,9 @@ export default async function PropiedadDetallePage({
         </div>
       </main>
 
-      <footer className="border-t border-border bg-white py-5 mt-16">
+      <footer className="bg-[#0F172A] py-8 mt-16">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <p className="text-xs text-muted-foreground/60">&copy; 2026 Domov Soluciones Inmobiliarias. Todos los derechos reservados.</p>
+          <p className="text-xs text-white/50">&copy; 2026 Domov Soluciones Inmobiliarias. Todos los derechos reservados.</p>
         </div>
       </footer>
 
@@ -232,5 +243,66 @@ export default async function PropiedadDetallePage({
         </svg>
       </a>
     </div>
+  )
+}
+
+function BedIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 18v-6h13a3 3 0 0 1 3 3v3" />
+      <path d="M3 14V7" />
+      <path d="M21 18v-2" />
+      <path d="M7 11V9a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 13 9v2" />
+    </svg>
+  )
+}
+
+function BathIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3Z" />
+      <path d="M6 12V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2" />
+      <path d="M7 19l-1 2M18 19l1 2" />
+    </svg>
+  )
+}
+
+function AreaIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 9V4h5" />
+      <path d="M20 15v5h-5" />
+      <path d="M15 4h5v5" />
+      <path d="M9 20H4v-5" />
+    </svg>
+  )
+}
+
+function CarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13" />
+      <path d="M4 13h16v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4Z" />
+      <circle cx="7.5" cy="15.5" r="1" />
+      <circle cx="16.5" cy="15.5" r="1" />
+    </svg>
+  )
+}
+
+function FloorIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5Z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  )
+}
+
+function StarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
   )
 }
