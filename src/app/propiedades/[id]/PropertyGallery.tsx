@@ -92,7 +92,7 @@ export function PropertyGallery({ photos, propertyName }: Props) {
               src={photos[lightboxIndex].photo_url}
               alt={`${propertyName} foto ${lightboxIndex + 1}`}
               fill
-              className="object-cover"
+              className="max-md:object-scale-down md:object-cover"
               sizes="100vw"
               priority
             />
