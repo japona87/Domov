@@ -32,9 +32,15 @@ export type ContractAmendment = {
   created_at: string
 }
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
+      [key: string]: {
+        Row: Record<string, unknown>
+        Insert: Record<string, unknown>
+        Update: Record<string, unknown>
+        Relationships: { foreignKeyName: string; columns: string[]; isOneToOne?: boolean; referencedRelation: string; referencedColumns: string[] }[]
+      }
       profiles: {
         Row: { id: string; role: UserRole; created_at: string }
         Insert: { id: string; role?: UserRole }
@@ -63,7 +69,7 @@ export interface Database {
         Row: { id: string; property_id: string; owner_id: string; ownership_pct: number; created_at: string }
         Insert: { id?: string; property_id: string; owner_id: string; ownership_pct?: number }
         Update: { ownership_pct?: number }
-        Relationships: []
+        Relationships: [{ foreignKeyName: "property_owners_owner_id_fkey"; columns: ["owner_id"]; referencedRelation: "owners"; referencedColumns: ["id"] }]
       }
       property_photos: {
         Row: { id: string; property_id: string; photo_url: string; is_cover: boolean; sort_order: number; created_at: string }
@@ -99,7 +105,7 @@ export interface Database {
         Row: ContractAmendment
         Insert: { id?: string; contract_id: string; amendment_number: number; amendment_date: string; period_start: string; period_end: string; monthly_rent: number; ipc_rate?: number | null; administration_fee?: number; admin_fee_increase_pct?: number | null; notes?: string | null }
         Update: { monthly_rent?: number; ipc_rate?: number | null; administration_fee?: number; admin_fee_increase_pct?: number | null; period_end?: string; notes?: string }
-        Relationships: [{ type: 'foreign_key'; columns: ['contract_id']; references: { table: 'contracts'; columns: ['id'] } }]
+        Relationships: []
       }
       payments: {
         Row: { id: string; contract_id: string; amount: number; due_date: string; paid_date: string | null; status: PaymentStatus; receipt_url: string | null; notes: string | null; created_at: string }
@@ -132,7 +138,7 @@ export interface Database {
         Relationships: []
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
+    Views: Record<string, { Row: Record<string, unknown>; Relationships: { foreignKeyName: string; columns: string[]; referencedRelation: string; referencedColumns: string[] }[] }>
+    Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>
   }
 }

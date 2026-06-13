@@ -185,7 +185,7 @@ export default async function ContratoDetailPage({
                     </p>
                     <p className="text-xs text-slate-600">
                       ${a.monthly_rent.toLocaleString('es-CO')} + $
-                      {a.administration_fee.toLocaleString('es-CO')} admón
+                      {a.administration_fee?.toLocaleString('es-CO') ?? '0'} admón
                       {a.ipc_rate != null && ` · IPC ${a.ipc_rate}%`}
                       {a.admin_fee_increase_pct != null && ` · Admin +${a.admin_fee_increase_pct}%`}
                     </p>

@@ -1,7 +1,10 @@
 // src/lib/supabase/server.ts
 import { createServerClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
+
+export type TypedSupabaseClient = SupabaseClient<Database, 'public'>
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -20,5 +23,5 @@ export async function createClient() {
         },
       },
     }
-  )
+  ) as unknown as TypedSupabaseClient
 }

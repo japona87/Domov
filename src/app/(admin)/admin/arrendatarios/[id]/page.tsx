@@ -18,7 +18,14 @@ export default async function EditarArrendatarioPage({
     .from('tenants')
     .select('id, full_name, document_number, phone, email, user_id')
     .eq('id', id)
-    .single()
+    .single() as unknown as { data: {
+      id: string
+      full_name: string
+      document_number: string | null
+      phone: string | null
+      email: string | null
+      user_id: string | null
+    } | null }
 
   if (!tenant) notFound()
 

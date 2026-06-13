@@ -138,6 +138,11 @@ export async function getContractAmendments(contractId: string) {
     .from('contract_amendments')
     .select('id, amendment_number, amendment_date, period_start, period_end, monthly_rent, ipc_rate, administration_fee, admin_fee_increase_pct, notes, created_at')
     .eq('contract_id', contractId)
-    .order('amendment_number', { ascending: true })
+    .order('amendment_number', { ascending: true }) as unknown as { data: Array<{
+      id: string; amendment_number: number; amendment_date: string
+      period_start: string; period_end: string; monthly_rent: number
+      ipc_rate: number | null; administration_fee: number | null
+      admin_fee_increase_pct: number | null; notes: string | null; created_at: string
+    }> | null }
   return data ?? []
 }

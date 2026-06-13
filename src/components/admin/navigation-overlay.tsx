@@ -7,7 +7,7 @@ export function NavigationOverlay() {
   const pathname = usePathname()
   const prevPathname = useRef(pathname)
   const [show, setShow] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<any>(null)
 
   useEffect(() => {
     if (prevPathname.current !== pathname) {

@@ -21,8 +21,8 @@ export default async function EditarContratoPage({
       .select('*')
       .eq('id', id)
       .single(),
-    supabase.from('properties').select('id, name, address').order('name'),
-    supabase.from('tenants').select('id, full_name, document_number').order('full_name'),
+    supabase.from('properties').select('id, name, address').order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
+    supabase.from('tenants').select('id, full_name, document_number').order('full_name') as unknown as { data: Array<{id: string; full_name: string; document_number: string | null}> | null },
   ])
 
   if (!contract) notFound()
@@ -45,7 +45,10 @@ export default async function EditarContratoPage({
     .from('documents')
     .select('id, name, type, description, file_url, file_size, mime_type, created_at')
     .eq('contract_id', id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }) as unknown as { data: Array<{
+      id: string; name: string; type: string; description: string | null
+      file_url: string; file_size: number | null; mime_type: string | null; created_at: string
+    }> | null }
 
   const docsWithSignedUrls = await Promise.all(
     (documents ?? []).map(async (d) => {

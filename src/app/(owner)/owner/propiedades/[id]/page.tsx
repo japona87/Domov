@@ -117,7 +117,7 @@ export default async function OwnerPropertyDetailPage({
                             <p className="text-xs text-foreground">
                               {i === 0 ? 'Original' : `Enmienda #${a.amendment_number}`}
                               {' · '}${a.monthly_rent.toLocaleString('es-CO')}
-                              {a.administration_fee > 0 && ` + $${a.administration_fee.toLocaleString('es-CO')}`}
+                              {a.administration_fee != null && a.administration_fee > 0 && ` + $${a.administration_fee.toLocaleString('es-CO')}`}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {a.period_start} → {a.period_end}

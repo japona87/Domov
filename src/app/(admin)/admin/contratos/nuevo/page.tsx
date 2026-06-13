@@ -9,8 +9,8 @@ export default async function NuevoContratoPage() {
   const supabase = await createClient()
 
   const [{ data: properties }, { data: tenants }] = await Promise.all([
-    supabase.from('properties').select('id, name, address').order('name'),
-    supabase.from('tenants').select('id, full_name, document_number').order('full_name'),
+    supabase.from('properties').select('id, name, address').order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
+    supabase.from('tenants').select('id, full_name, document_number').order('full_name') as unknown as { data: Array<{id: string; full_name: string; document_number: string | null}> | null },
   ])
 
   const propertyOptions = (properties ?? []).map((p) => ({

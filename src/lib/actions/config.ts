@@ -12,7 +12,11 @@ export async function getSystemConfig() {
     .from('system_config')
     .select('*')
     .eq('year', currentYear)
-    .single()
+    .single() as unknown as { data: {
+      renewal_notice_days: number
+      audit_retention_days: number
+      storage_limit_gb: number
+    } | null; error: any }
   if (error && error.code !== 'PGRST116') throw new Error(error.message)
   return data
 }

@@ -11,7 +11,13 @@ export default async function ArrendatariosPage() {
   const { data: tenants } = await supabase
     .from('tenants')
     .select('id, full_name, document_number, phone, email')
-    .order('full_name')
+    .order('full_name') as unknown as { data: Array<{
+      id: string
+      full_name: string
+      document_number: string | null
+      phone: string | null
+      email: string | null
+    }> | null }
 
   return (
     <div className="space-y-6">

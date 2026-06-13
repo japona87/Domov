@@ -36,7 +36,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const [{ count }, { data: logs }, { data: sysConfig }] = await Promise.all([
     countQuery,
     dataQuery,
-    supabase.from('system_config').select('audit_retention_days').eq('year', currentYear).single(),
+    supabase.from('system_config').select('audit_retention_days').eq('year', currentYear).single() as unknown as { data: { audit_retention_days: number } | null },
   ])
   const totalPages = Math.ceil((count ?? 0) / limit)
   const retentionDays = sysConfig?.audit_retention_days ?? 90
