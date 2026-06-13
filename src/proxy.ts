@@ -3,6 +3,15 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
+  // Redirect domov.co → www.domov.co (evita sitio viejo en móviles)
+  const host = request.headers.get('host') || ''
+  if (host === 'domov.co' || host === 'domov.co:443') {
+    const url = new URL(request.url)
+    url.host = 'www.domov.co'
+    url.protocol = 'https'
+    return NextResponse.redirect(url, 301)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -71,5 +80,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/tenant/:path*', '/owner/:path*', '/login'],
+  matcher: ['/', '/propiedades/:path*', '/admin/:path*', '/tenant/:path*', '/owner/:path*', '/login'],
 }
