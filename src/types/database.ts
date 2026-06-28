@@ -60,9 +60,9 @@ export type Database = {
         Relationships: []
       }
       properties: {
-        Row: { id: string; name: string; address: string; type: string; description: string | null; features: PropertyFeatures; monthly_price: number | null; administration_fee: number | null; is_published: boolean; created_at: string }
-        Insert: { id?: string; name: string; address: string; type: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; is_published?: boolean }
-        Update: { name?: string; address?: string; type?: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; is_published?: boolean }
+        Row: { id: string; name: string; address: string; type: string; description: string | null; features: PropertyFeatures; monthly_price: number | null; administration_fee: number | null; maps_url: string | null; chip: string | null; matricula: string | null; is_published: boolean; created_at: string }
+        Insert: { id?: string; name: string; address: string; type: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean }
+        Update: { name?: string; address?: string; type?: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean }
         Relationships: []
       }
       property_owners: {

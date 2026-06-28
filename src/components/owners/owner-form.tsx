@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,14 +16,16 @@ interface OwnerFormProps {
     email: string | null
   }
   onSubmit: (formData: FormData) => Promise<void>
+  cancelHref?: string
 }
 
 function sanitizeDigits(value: string): string {
   return value.replace(/\D/g, '')
 }
 
-export function OwnerForm({ owner, onSubmit }: OwnerFormProps) {
+export function OwnerForm({ owner, onSubmit, cancelHref = '/admin/propietarios' }: OwnerFormProps) {
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
   const [docError, setDocError] = useState('')
   const [phoneError, setPhoneError] = useState('')
 
@@ -68,7 +71,15 @@ export function OwnerForm({ owner, onSubmit }: OwnerFormProps) {
   return (
     <>
       <LoadingOverlay pending={isPending} message={owner ? 'Actualizando propietario...' : 'Creando propietario...'} />
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-center justify-end gap-2 mb-6">
+        <Button type="submit" variant="outline" disabled={isPending}>
+          {isPending ? 'Guardando...' : (owner ? 'Guardar cambios' : 'Crear propietario')}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => router.push(cancelHref)}>
+          Cancelar
+        </Button>
+      </div>
       <div className="space-y-1">
         <Label htmlFor="fullName">Nombre completo *</Label>
         <Input id="fullName" name="fullName" required defaultValue={owner?.full_name ?? ''} placeholder="Juan Pérez" />
@@ -111,9 +122,6 @@ export function OwnerForm({ owner, onSubmit }: OwnerFormProps) {
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" defaultValue={owner?.email ?? ''} placeholder="juan@ejemplo.com" />
       </div>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : (owner ? 'Guardar cambios' : 'Crear propietario')}
-      </Button>
       </form>
     </>
   )

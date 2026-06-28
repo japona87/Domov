@@ -319,6 +319,7 @@ export async function updateContract(id: string, formData: FormData) {
   revalidatePath('/admin/contratos')
   revalidatePath(`/admin/contratos/${id}`)
   revalidatePath('/admin/propiedades')
+  redirect('/admin/contratos')
 }
 
 export async function setContractEnded(contractId: string) {

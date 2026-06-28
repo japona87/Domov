@@ -1,30 +1,36 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 export function NavigationOverlay() {
   const pathname = usePathname()
-  const prevPathname = useRef(pathname)
+  const searchParams = useSearchParams()
+  const prevKey = useRef(`${pathname}?${searchParams.toString()}`)
   const [show, setShow] = useState(false)
-  const timerRef = useRef<any>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const safetyRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  function clearTimers() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = undefined }
+    if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = undefined }
+  }
 
   useEffect(() => {
-    if (prevPathname.current !== pathname) {
-      prevPathname.current = pathname
-      if (timerRef.current) {
-        clearTimeout(timerRef.current)
-        timerRef.current = undefined
-      }
+    const currentKey = `${pathname}?${searchParams.toString()}`
+    if (prevKey.current !== currentKey) {
+      prevKey.current = currentKey
+      clearTimers()
       setShow(false)
     }
-  }, [pathname])
+  }, [pathname, searchParams])
 
   useEffect(() => {
     function startTimer() {
-      if (timerRef.current) clearTimeout(timerRef.current)
+      clearTimers()
       setShow(false)
       timerRef.current = setTimeout(() => setShow(true), 1000)
+      safetyRef.current = setTimeout(() => { clearTimers(); setShow(false) }, 15000)
     }
 
     function handleClick(e: MouseEvent) {
@@ -32,6 +38,8 @@ export function NavigationOverlay() {
       if (!link) return
       const href = link.getAttribute('href')
       if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return
+      const currentUrl = `${window.location.pathname}${window.location.search}`
+      if (href === currentUrl) return
       startTimer()
     }
 
@@ -41,7 +49,7 @@ export function NavigationOverlay() {
     return () => {
       window.removeEventListener('popstate', startTimer)
       document.removeEventListener('click', handleClick)
-      if (timerRef.current) clearTimeout(timerRef.current)
+      clearTimers()
     }
   }, [])
 

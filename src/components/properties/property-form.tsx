@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +38,8 @@ interface PropertyFormProps {
   property?: Property
   onSubmit: (formData: FormData) => Promise<void>
   featureConfigs: FieldConfig[]
+  cancelHref?: string
+  fotosHref?: string
 }
 
 const PROPERTY_TYPES = [
@@ -48,7 +51,7 @@ const PROPERTY_TYPES = [
   { value: 'other', label: 'Otro' },
 ]
 
-export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFormProps) {
+export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = '/admin/propiedades', fotosHref }: PropertyFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
@@ -84,9 +87,24 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
   return (
     <>
       <LoadingOverlay pending={isPending} message={property ? 'Actualizando inmueble...' : 'Creando inmueble...'} />
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+      <form onSubmit={handleSubmit} className="space-y-6">
       <div className="bg-white rounded-lg border p-6 space-y-4">
-        <h3 className="font-semibold text-slate-800">Información básica</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800">Información básica</h3>
+          <div className="flex items-center gap-2">
+            {fotosHref && (
+              <Link href={fotosHref}>
+                <Button type="button" variant="outline">Fotos</Button>
+              </Link>
+            )}
+            <Button type="submit" variant="outline" disabled={isPending}>
+              {isPending ? 'Guardando...' : (property ? 'Guardar cambios' : 'Crear inmueble')}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push(cancelHref)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="name">Nombre *</Label>
@@ -141,6 +159,21 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
           <Label htmlFor="is_published_check" className="cursor-pointer font-normal">
             Publicar en la landing pública
           </Label>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border p-6 space-y-4">
+        <h3 className="font-semibold text-slate-800">Datos Catastrales</h3>
+        <p className="text-xs text-muted-foreground">Estos datos son internos y no se muestran en la landing pública.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="chip">Chip</Label>
+            <Input id="chip" name="chip" defaultValue={(property as Record<string, unknown>)?.chip as string | undefined} placeholder="AAAA-0000-0000-000" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="matricula">Matrícula inmobiliaria</Label>
+            <Input id="matricula" name="matricula" defaultValue={(property as Record<string, unknown>)?.matricula as string | undefined} placeholder="350-123456" />
+          </div>
         </div>
       </div>
 
@@ -308,14 +341,6 @@ export function PropertyForm({ property, onSubmit, featureConfigs }: PropertyFor
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Guardando...' : property ? 'Guardar cambios' : 'Crear inmueble'}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.push('/admin/propiedades')}>
-          Cancelar
-        </Button>
-      </div>
       </form>
     </>
   )

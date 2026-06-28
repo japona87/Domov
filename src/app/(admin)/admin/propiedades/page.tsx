@@ -1,9 +1,12 @@
+import Image from 'next/image'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DeleteButton } from '@/components/delete-button'
 import { TogglePublished } from '@/components/admin/toggle-published'
+import { SearchBar } from '@/components/admin/search-bar'
 import { deleteProperty } from '@/lib/actions/properties'
 
 export const dynamic = 'force-dynamic'
@@ -26,13 +29,24 @@ type PropertyRow = {
   contracts: { id: string; status: string }[]
 }
 
-export default async function PropiedadesPage() {
+export default async function PropiedadesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q } = await searchParams
   const supabase = await createClient()
 
-  const { data: properties } = await supabase
+  let query = supabase
     .from('properties')
     .select('id, name, address, type, is_published, contracts(id, status)')
-    .order('name') as { data: PropertyRow[] | null }
+
+  if (q?.trim()) {
+    const search = `%${q.trim()}%`
+    query = query.or(`name.ilike.${search},address.ilike.${search}`)
+  }
+
+  const { data: properties } = await query.order('name') as { data: PropertyRow[] | null }
 
   return (
     <div className="space-y-6">
@@ -41,19 +55,23 @@ export default async function PropiedadesPage() {
           <h2 className="text-2xl font-sans font-semibold text-foreground">Propiedades</h2>
           <p className="text-sm text-muted-foreground mt-1">{properties?.length ?? 0} inmuebles registrados</p>
         </div>
-        <Button asChild>
+        <Button variant="outline" asChild>
           <Link href="/admin/propiedades/nueva">+ Nuevo inmueble</Link>
         </Button>
       </div>
+
+      <Suspense fallback={null}>
+        <SearchBar placeholder="Buscar por nombre o dirección..." />
+      </Suspense>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Inmueble</th>
-              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Tipo</th>
-              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Estado</th>
-              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Publicado</th>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Inmueble</th>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Tipo</th>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Estado</th>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Publicado</th>
               <th className="px-5 py-3.5"></th>
               <th className="w-14 px-5 py-3.5"></th>
             </tr>
@@ -80,7 +98,9 @@ export default async function PropiedadesPage() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent hover:bg-accent/10">
-                      <Link href={`/admin/propiedades/${p.id}`}>Editar</Link>
+                      <Link href={`/admin/propiedades/${p.id}`} title="Editar">
+                        <Image src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
+                      </Link>
                     </Button>
                   </td>
                   <td className="px-5 py-4">
@@ -92,10 +112,14 @@ export default async function PropiedadesPage() {
             {(!properties || properties.length === 0) && (
               <tr>
                 <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
-                  No hay propiedades.{' '}
-                  <Link href="/admin/propiedades/nueva" className="text-accent hover:text-accent/80 font-medium">
-                    Crear la primera
-                  </Link>
+                  {q?.trim()
+                    ? 'No se encontraron propiedades con ese criterio de búsqueda.'
+                    : <>No hay propiedades.{' '}
+                      <Link href="/admin/propiedades/nueva" className="text-accent hover:text-accent/80 font-medium">
+                        Crear la primera
+                      </Link>
+                    </>
+                  }
                 </td>
               </tr>
             )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +30,7 @@ interface ContractFormProps {
   tenants: Selectable[]
   onSubmit: (formData: FormData) => Promise<void>
   contract?: ContractData
+  cancelHref?: string
 }
 
 function formatPrice(value: string): string {
@@ -55,9 +57,10 @@ function monthsBetween(d1: string, d2: string): number {
   return Math.round((b.getTime() - a.getTime()) / (30.44 * 86400000))
 }
 
-export function ContractForm({ properties, tenants, onSubmit, contract }: ContractFormProps) {
+export function ContractForm({ properties, tenants, onSubmit, contract, cancelHref = '/admin/contratos' }: ContractFormProps) {
   const isEditing = !!contract
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
   const [errors, setErrors] = useState<string[]>([])
   const [monthlyRentDisplay, setMonthlyRentDisplay] = useState(
     contract ? formatPrice(String(contract.monthly_rent)) : ''
@@ -118,7 +121,15 @@ export function ContractForm({ properties, tenants, onSubmit, contract }: Contra
   return (
     <>
       <LoadingOverlay pending={isPending} message={isEditing ? 'Actualizando contrato...' : 'Creando contrato...'} />
-      <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
+      <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-center justify-end gap-2 mb-2">
+        <Button type="submit" variant="outline" disabled={isPending}>
+          {isPending ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Crear contrato')}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => router.push(cancelHref)}>
+          Cancelar
+        </Button>
+      </div>
       {errors.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 space-y-1">
           {errors.map((e, i) => (
@@ -256,12 +267,6 @@ export function ContractForm({ properties, tenants, onSubmit, contract }: Contra
           defaultValue={contract?.notes ?? ''}
         />
       </div>
-      <Button type="submit" disabled={isPending}>
-        {isPending
-          ? (isEditing ? 'Actualizando...' : 'Creando...')
-          : (isEditing ? 'Guardar cambios' : 'Crear contrato')
-        }
-      </Button>
       </form>
     </>
   )

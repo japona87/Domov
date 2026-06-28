@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,14 +16,16 @@ interface TenantFormProps {
     email: string | null
   }
   onSubmit: (formData: FormData) => Promise<void>
+  cancelHref?: string
 }
 
 function sanitizeDigits(value: string): string {
   return value.replace(/\D/g, '')
 }
 
-export function TenantForm({ tenant, onSubmit }: TenantFormProps) {
+export function TenantForm({ tenant, onSubmit, cancelHref = '/admin/arrendatarios' }: TenantFormProps) {
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
   const [docError, setDocError] = useState('')
   const [phoneError, setPhoneError] = useState('')
 
@@ -64,7 +67,15 @@ export function TenantForm({ tenant, onSubmit }: TenantFormProps) {
   return (
     <>
       <LoadingOverlay pending={isPending} message={tenant ? 'Actualizando arrendatario...' : 'Creando arrendatario...'} />
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-center justify-end gap-2 mb-6">
+        <Button type="submit" variant="outline" disabled={isPending}>
+          {isPending ? 'Guardando...' : (tenant ? 'Guardar cambios' : 'Crear arrendatario')}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => router.push(cancelHref)}>
+          Cancelar
+        </Button>
+      </div>
       <div className="space-y-1">
         <Label htmlFor="full_name">Nombre completo *</Label>
         <Input id="full_name" name="full_name" required defaultValue={tenant?.full_name ?? ''} placeholder="Juan Pérez" />
@@ -105,9 +116,6 @@ export function TenantForm({ tenant, onSubmit }: TenantFormProps) {
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" defaultValue={tenant?.email ?? ''} placeholder="juan@ejemplo.com" />
       </div>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : (tenant ? 'Guardar cambios' : 'Crear arrendatario')}
-      </Button>
       </form>
     </>
   )

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { LogoutButton } from '@/components/logout-button'
 import { NavigationOverlay } from '@/components/admin/navigation-overlay'
@@ -5,7 +6,7 @@ import { NavigationOverlay } from '@/components/admin/navigation-overlay'
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
-      <NavigationOverlay />
+      <Suspense fallback={null}><NavigationOverlay /></Suspense>
       <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between sticky top-0 z-10">
         <Link href="/tenant/dashboard" className="flex items-center gap-2.5">
           <span className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">

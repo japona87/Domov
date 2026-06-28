@@ -69,14 +69,12 @@ export default async function AdminDashboard() {
     { data: { user } },
     { count: totalProperties },
     { data: activeContractsList },
-    { count: pendingPayments },
     { count: totalTenants },
     { count: totalOwners },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('properties').select('*', { count: 'exact', head: true }),
     supabase.from('contracts').select('property_id').in('status', ['active', 'ending']),
-    supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('tenants').select('*', { count: 'exact', head: true }),
     supabase.from('owners').select('*', { count: 'exact', head: true }),
   ])
@@ -169,18 +167,6 @@ export default async function AdminDashboard() {
           }
         />
 
-        <StatCard
-          href="/admin/contratos"
-          label="Pagos pendientes"
-          value={pendingPayments ?? 0}
-          alert={(pendingPayments ?? 0) > 0}
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-              <line x1="1" y1="10" x2="23" y2="10"/>
-            </svg>
-          }
-        />
       </div>
 
       {/* Quick actions */}

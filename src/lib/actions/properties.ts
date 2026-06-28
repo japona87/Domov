@@ -30,6 +30,8 @@ export async function createProperty(formData: FormData) {
   const monthlyPrice = formData.get('monthly_price')
   const adminFee = formData.get('administration_fee')
   const mapsUrl = formData.get('maps_url')
+  const chip = formData.get('chip')
+  const matricula = formData.get('matricula')
   const insert = {
     name: String(formData.get('name')),
     address: String(formData.get('address')),
@@ -40,6 +42,8 @@ export async function createProperty(formData: FormData) {
     administration_fee: adminFee && String(adminFee) !== '' ? Number(adminFee) : null,
     is_published: formData.get('is_published') === 'true',
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
+    chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
+    matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
   }
   validatePropertyFields({ name: insert.name, monthly_price: insert.monthly_price })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,10 +56,12 @@ export async function createProperty(formData: FormData) {
 
 export async function updateProperty(id: string, formData: FormData) {
   const supabase = await createClient()
-  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, maps_url').eq('id', id).single()
+  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, maps_url, chip, matricula').eq('id', id).single()
   const monthlyPrice = formData.get('monthly_price')
   const adminFee = formData.get('administration_fee')
   const mapsUrl = formData.get('maps_url')
+  const chip = formData.get('chip')
+  const matricula = formData.get('matricula')
   const update = {
     name: String(formData.get('name')),
     address: String(formData.get('address')),
@@ -66,13 +72,15 @@ export async function updateProperty(id: string, formData: FormData) {
     administration_fee: adminFee && String(adminFee) !== '' ? Number(adminFee) : null,
     is_published: formData.get('is_published') === 'true',
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
+    chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
+    matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
   }
   validatePropertyFields({ name: update.name, monthly_price: update.monthly_price })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase.from('properties').update(update as any).eq('id', id)
   if (error) throw new Error(error.message)
   if (before) {
-    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'maps_url'])
+    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'maps_url', 'chip', 'matricula'])
     if (Object.keys(changes).length > 0) {
       await logAudit({ action: 'update', entity: 'property', entityId: id, entityName: update.name, changes: changes as unknown as Json })
     }
@@ -80,6 +88,7 @@ export async function updateProperty(id: string, formData: FormData) {
   revalidatePath('/admin/propiedades')
   revalidatePath(`/admin/propiedades/${id}`)
   revalidatePath('/propiedades')
+  redirect('/admin/propiedades')
 }
 
 export async function deleteProperty(prevState: { error?: string } | undefined, id: string) {

@@ -1,7 +1,10 @@
+import Image from 'next/image'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { DeleteButton } from '@/components/delete-button'
+import { SearchBar } from '@/components/admin/search-bar'
 import { deleteContract } from '@/lib/actions/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -23,9 +26,9 @@ const TABS = [
 export default async function ContratosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; q?: string }>
 }) {
-  const { tab } = await searchParams
+  const { tab, q } = await searchParams
   const supabase = await createClient()
 
   let query = supabase
@@ -47,7 +50,17 @@ export default async function ContratosPage({
     }
   }
 
-  const { data: contracts } = await query
+  if (q?.trim()) {
+    const search = `%${q.trim()}%`
+    query = query.or(`properties.name.ilike.${search},tenants.full_name.ilike.${search}`)
+  }
+
+  const { data: contracts } = await query as unknown as { data: Array<{
+    id: string; status: string; start_date: string; end_date: string
+    monthly_rent: number
+    properties: { name: string; address: string } | null
+    tenants: { full_name: string } | null
+  }> | null }
 
   return (
     <div className="space-y-6">
@@ -56,7 +69,7 @@ export default async function ContratosPage({
           <h2 className="text-2xl font-sans font-semibold text-foreground">Contratos</h2>
           <p className="text-sm text-muted-foreground mt-1">{contracts?.length ?? 0} contratos registrados</p>
         </div>
-        <Button asChild>
+        <Button variant="outline" asChild>
           <Link href="/admin/contratos/nuevo">+ Nuevo contrato</Link>
         </Button>
       </div>
@@ -77,16 +90,20 @@ export default async function ContratosPage({
         ))}
       </div>
 
+      <Suspense fallback={null}>
+        <SearchBar placeholder="Buscar por inmueble o arrendatario..." />
+      </Suspense>
+
       {contracts && contracts.length > 0 ? (
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Inmueble</th>
-                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Arrendatario</th>
-                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Vigencia</th>
-                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Canon</th>
-                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">Estado</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Inmueble</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Arrendatario</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Vigencia</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Canon</th>
+                <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Estado</th>
                 <th className="px-5 py-3.5"></th>
                 <th className="w-14 px-5 py-3.5"></th>
               </tr>
@@ -123,9 +140,10 @@ export default async function ContratosPage({
                     <td className="px-5 py-4 text-right">
                       <Link
                         href={`/admin/contratos/${c.id}/editar`}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="inline-flex items-center justify-center text-blue-600 hover:text-blue-700"
+                        title="Editar"
                       >
-                        Editar
+                        <Image src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
                       </Link>
                     </td>
                     <td className="px-5 py-4">
@@ -139,9 +157,12 @@ export default async function ContratosPage({
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
-          {tab && tab !== 'all'
-            ? `No hay contratos ${TABS.find(t => t.key === tab)?.label.toLowerCase() ?? tab}.`
-            : 'Sin contratos registrados.'}
+          {q?.trim()
+            ? 'No se encontraron contratos con ese criterio de búsqueda.'
+            : tab && tab !== 'all'
+              ? `No hay contratos ${TABS.find(t => t.key === tab)?.label.toLowerCase() ?? tab}.`
+              : 'Sin contratos registrados.'
+          }
         </div>
       )}
     </div>

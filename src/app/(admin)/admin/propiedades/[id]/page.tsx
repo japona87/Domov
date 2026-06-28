@@ -2,7 +2,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
 import { PropertyForm } from '@/components/properties/property-form'
 import { OwnersManager } from '@/components/properties/owners-manager'
 import { updateProperty } from '@/lib/actions/properties'
@@ -35,18 +34,14 @@ export default async function EditarPropiedadPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div>
+        <Link href="/admin/propiedades" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Volver al listado
+        </Link>
         <div>
-          <p className="text-sm text-muted-foreground mb-1">
-            <Link href="/admin/propiedades" className="hover:underline">Propiedades</Link> / Editar
-          </p>
           <h2 className="text-2xl font-sans font-semibold text-foreground">{property.name}</h2>
           <p className="text-muted-foreground">{property.address}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/admin/propiedades/${id}/fotos`}>Fotos</Link>
-          </Button>
         </div>
       </div>
 
@@ -57,6 +52,8 @@ export default async function EditarPropiedadPage({
           id: string; property_type: string; field_key: string; field_label: string
           placeholder: string; field_type: string; sort_order: number; is_active: boolean
         }>}
+        cancelHref="/admin/propiedades"
+        fotosHref={`/admin/propiedades/${id}/fotos`}
       />
 
       <div className="bg-card rounded-xl border border-border p-6 space-y-4">

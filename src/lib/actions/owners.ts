@@ -57,6 +57,7 @@ export async function updateOwner(id: string, formData: FormData) {
   }
   revalidatePath('/admin/propietarios')
   revalidatePath(`/admin/propietarios/${id}`)
+  redirect('/admin/propietarios')
 }
 
 export async function deleteOwner(prev: { error?: string } | undefined, id: string) {
