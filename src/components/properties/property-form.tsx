@@ -78,7 +78,8 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
       try {
         await onSubmit(formData)
         toast.success(property ? 'Inmueble actualizado' : 'Inmueble creado')
-      } catch {
+      } catch (e) {
+        if (e instanceof Error && 'digest' in e && typeof e.digest === 'string' && e.digest.startsWith('NEXT_REDIRECT')) return
         toast.error('Error al guardar el inmueble')
       }
     })

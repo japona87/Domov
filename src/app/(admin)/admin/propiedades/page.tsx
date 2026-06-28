@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
@@ -99,7 +98,7 @@ export default async function PropiedadesPage({
                   <td className="px-5 py-4 text-right">
                     <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent hover:bg-accent/10">
                       <Link href={`/admin/propiedades/${p.id}`} title="Editar">
-                        <Image src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
+                        <img src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
                       </Link>
                     </Button>
                   </td>

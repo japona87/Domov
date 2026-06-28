@@ -113,6 +113,7 @@ export function ContractForm({ properties, tenants, onSubmit, contract, cancelHr
       try {
         await onSubmit(formData)
       } catch (err) {
+        if (err instanceof Error && 'digest' in err && typeof (err as Error & { digest: string }).digest === 'string' && (err as Error & { digest: string }).digest.startsWith('NEXT_REDIRECT')) return
         toast.error(err instanceof Error ? err.message : 'Error al guardar contrato')
       }
     })

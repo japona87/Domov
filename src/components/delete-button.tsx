@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/admin/loading-overlay'
 
@@ -46,7 +45,7 @@ export function DeleteButton({ action, id, label = 'Eliminar' }: DeleteButtonPro
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogTrigger render={
           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" title={label}>
-            <Image src="/icons/delete.png" alt={label} width={20} height={20} className="shrink-0" />
+            <img src="/icons/delete.png" alt={label} width={20} height={20} className="shrink-0" />
           </Button>
         } />
         <AlertDialogContent>

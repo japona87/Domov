@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
@@ -143,7 +142,7 @@ export default async function ContratosPage({
                         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-700"
                         title="Editar"
                       >
-                        <Image src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
+                        <img src="/icons/edit.png" alt="Editar" width={20} height={20} className="shrink-0" />
                       </Link>
                     </td>
                     <td className="px-5 py-4">
