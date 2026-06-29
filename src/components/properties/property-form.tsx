@@ -309,7 +309,7 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
                 URL válida — el mapa se mostrará en la landing
               </span>
               <a
-                href={mapsUrl.replace('/embed', '/maps')}
+                href={property ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${property.address} Bogotá`)}` : '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-accent hover:underline"
