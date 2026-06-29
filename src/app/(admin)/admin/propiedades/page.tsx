@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { Suspense, Fragment } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { TogglePublished } from '@/components/admin/toggle-published'
 import { SearchBar } from '@/components/admin/search-bar'
 import { MapPreviewButton } from '@/components/admin/map-preview'
 import { ToggleManaged } from '@/components/admin/toggle-managed'
+import { PropertyTypeFilter } from '@/components/admin/property-type-filter'
 import { deleteProperty } from '@/lib/actions/properties'
 
 export const dynamic = 'force-dynamic'
@@ -36,24 +37,36 @@ type PropertyRow = {
 export default async function PropiedadesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; type?: string }>
 }) {
-  const { q } = await searchParams
+  const { q, type } = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('properties')
-    .select('id, name, address, type, is_published, managed_by_domov, maps_url, parent_property_id, contracts(id, status)')
+  const [countResult, propertiesResult] = await Promise.all([
+    supabase.from('properties').select('type'),
+    supabase.from('properties').select('id, name, address, type, is_published, managed_by_domov, maps_url, parent_property_id, contracts(id, status)').order('name'),
+  ])
 
-  if (q?.trim()) {
-    const search = `%${q.trim()}%`
-    query = query.or(`name.ilike.${search},address.ilike.${search}`)
+  const countData = countResult.data as unknown as { type: string }[] | null
+  const allProperties = propertiesResult.data as unknown as PropertyRow[] | null
+
+  const typeCounts: Record<string, number> = {}
+  for (const row of countData ?? []) {
+    typeCounts[row.type] = (typeCounts[row.type] ?? 0) + 1
   }
 
-  const { data: allProperties } = await query.order('name') as { data: PropertyRow[] | null }
+  let filtered = allProperties ?? []
 
-  const properties = allProperties ?? []
+  if (q?.trim()) {
+    const s = q.trim().toLowerCase()
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s))
+  }
 
+  if (type?.trim()) {
+    filtered = filtered.filter(p => p.type === type)
+  }
+
+  const properties = filtered
   const parentMap = new Map(properties.filter(p => !p.parent_property_id).map(p => [p.id, p]))
   const childrenMap = new Map<string, PropertyRow[]>()
   for (const p of properties) {
@@ -70,11 +83,12 @@ export default async function PropiedadesPage({
     return p.contracts?.some((c) => ['active', 'ending'].includes(c.status))
   }
 
-  function renderRow(p: PropertyRow, isChild = false) {
+  function renderRow(p: PropertyRow, isChild = false, index: number | null) {
     const occupied = isOccupied(p)
     const parentName = p.parent_property_id ? parentMap.get(p.parent_property_id)?.name : null
     return (
-      <tr key={p.id} className={`hover:bg-muted/50 transition-colors ${isChild ? 'border-t-0' : ''}`}>
+      <tr key={p.id} className={`transition-colors ${!isChild ? 'bg-muted/30' : 'bg-white'} ${isChild ? 'border-t-0' : ''}`}>
+        <td className="px-5 py-4 text-muted-foreground text-xs tabular-nums w-10">{index ?? ''}</td>
         <td className={`px-5 py-4 ${isChild ? 'pl-14' : ''}`}>
           <div className="flex items-center gap-2">
             {isChild && (
@@ -131,6 +145,8 @@ export default async function PropiedadesPage({
     )
   }
 
+  const parents = properties.filter(p => !p.parent_property_id)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -144,6 +160,10 @@ export default async function PropiedadesPage({
       </div>
 
       <Suspense fallback={null}>
+        <PropertyTypeFilter counts={typeCounts} />
+      </Suspense>
+
+      <Suspense fallback={null}>
         <SearchBar placeholder="Buscar por nombre o dirección..." />
       </Suspense>
 
@@ -151,6 +171,7 @@ export default async function PropiedadesPage({
         <table className="w-full text-sm">
           <thead className="bg-muted border-b border-border">
             <tr>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider w-10">#</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Inmueble</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Tipo</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Estado</th>
@@ -162,17 +183,17 @@ export default async function PropiedadesPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {properties.filter(p => !p.parent_property_id).map((parent) => (
-              <>
-                {renderRow(parent)}
-                {(childrenMap.get(parent.id) ?? []).map((child) => renderRow(child, true))}
-              </>
+            {parents.map((parent, idx) => (
+              <Fragment key={parent.id}>
+                {renderRow(parent, false, idx + 1)}
+                {(childrenMap.get(parent.id) ?? []).map((child) => renderRow(child, true, null))}
+              </Fragment>
             ))}
-            {properties.length === 0 && (
+            {parents.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
-                  {q?.trim()
-                    ? 'No se encontraron propiedades con ese criterio de búsqueda.'
+                <td colSpan={9} className="px-5 py-12 text-center text-muted-foreground">
+                  {q?.trim() || type?.trim()
+                    ? 'No se encontraron propiedades con esos criterios.'
                     : <>No hay propiedades.{' '}
                       <Link href="/admin/propiedades/nueva" className="text-accent hover:text-accent/80 font-medium">
                         Crear la primera

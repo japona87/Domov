@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 export function SearchBar({ placeholder = 'Buscar...' }: { placeholder?: string }) {
   const searchParams = useSearchParams()
@@ -10,21 +10,34 @@ export function SearchBar({ placeholder = 'Buscar...' }: { placeholder?: string 
   const q = searchParams.get('q') ?? ''
   const [value, setValue] = useState(q)
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   useEffect(() => {
     setValue(q)
   }, [q])
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const navigateWithParams = useCallback((val: string) => {
     const params = new URLSearchParams(searchParams)
-    if (value.trim()) params.set('q', value.trim())
+    if (val.trim()) params.set('q', val.trim())
     else params.delete('q')
     router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
+
+  function handleChange(val: string) {
+    setValue(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => navigateWithParams(val), 300)
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    navigateWithParams(value)
   }
 
   function handleClear() {
     setValue('')
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     const params = new URLSearchParams(searchParams)
     params.delete('q')
     router.push(`${pathname}?${params.toString()}`)
@@ -39,7 +52,7 @@ export function SearchBar({ placeholder = 'Buscar...' }: { placeholder?: string 
       <input
         ref={inputRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
         className="w-full h-10 pl-9 pr-9 rounded-lg border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
