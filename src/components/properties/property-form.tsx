@@ -70,11 +70,11 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
   const mapsHref = !mapsUrl || !mapsUrlValid
     ? '#'
     : (() => {
+        const placeId = mapsUrl.match(/!1s([^!]+)/)?.[1]
+        if (placeId) return `https://www.google.com/maps/place/?q=place_id:${placeId}`
         const lat = mapsUrl.match(/!3d(-?\d+\.\d+)/)?.[1]
         const lng = mapsUrl.match(/!2d(-?\d+\.\d+)/)?.[1]
-        if (lat && lng) {
-          return `https://www.google.com/maps?q=${lat},${lng}`
-        }
+        if (lat && lng) return `https://www.google.com/maps/@${lat},${lng},18z?entry=api`
         return property
           ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${property.address} Bogotá`)}`
           : '#'
