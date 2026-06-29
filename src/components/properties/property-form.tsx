@@ -301,11 +301,26 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
             </div>
           )}
           {mapsUrl && mapsUrlValid && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              URL válida — el mapa se mostrará en la landing
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                URL válida — el mapa se mostrará en la landing
+              </span>
+              <a
+                href={mapsUrl.replace('/embed', '/maps')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-accent hover:underline"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Abrir en Google Maps
+              </a>
             </div>
           )}
         </div>
