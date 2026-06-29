@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 export default async function NuevaPropiedadPage() {
   const supabase = await createClient()
   const featureConfigs = await getFeatureConfigs()
-  const { data: parents } = await supabase.from('properties').select('id, name, address').is('parent_property_id', null).order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null }
+  const { data: parents } = await supabase.from('properties').select('id, name, address').is('parent_property_id', null).neq('type', 'garage').order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null }
 
   const parentOptions = (parents ?? []).map((p) => ({
     id: p.id,

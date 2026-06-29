@@ -20,7 +20,7 @@ export default async function EditarPropiedadPage({
   const [propertyResult, featureConfigs, parentsResult] = await Promise.all([
     supabase.from('properties').select('*').eq('id', id).single(),
     getFeatureConfigs(),
-    supabase.from('properties').select('id, name, address').is('parent_property_id', null).neq('id', id).order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
+    supabase.from('properties').select('id, name, address').is('parent_property_id', null).neq('type', 'garage').neq('id', id).order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
   ])
 
   const { data: property } = propertyResult
