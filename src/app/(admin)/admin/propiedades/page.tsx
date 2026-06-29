@@ -77,6 +77,12 @@ export default async function PropiedadesPage({
     }
   }
 
+  const parents = properties.filter(p => !p.parent_property_id)
+  const renderedParentIds = new Set(parents.map(p => p.id))
+  const orphanChildren = type
+    ? properties.filter(p => p.parent_property_id && !renderedParentIds.has(p.parent_property_id))
+    : []
+
   const domovCount = properties.filter(p => p.managed_by_domov).length
 
   function isOccupied(p: PropertyRow) {
@@ -145,8 +151,6 @@ export default async function PropiedadesPage({
     )
   }
 
-  const parents = properties.filter(p => !p.parent_property_id)
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -189,7 +193,8 @@ export default async function PropiedadesPage({
                 {(childrenMap.get(parent.id) ?? []).map((child) => renderRow(child, true, null))}
               </Fragment>
             ))}
-            {parents.length === 0 && (
+            {orphanChildren.map((child, idx) => renderRow(child, true, parents.length + idx + 1))}
+            {parents.length === 0 && orphanChildren.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-5 py-12 text-center text-muted-foreground">
                   {q?.trim() || type?.trim()
