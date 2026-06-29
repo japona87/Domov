@@ -41,6 +41,7 @@ export async function createProperty(formData: FormData) {
     monthly_price: monthlyPrice && String(monthlyPrice) !== '' ? Number(monthlyPrice) : null,
     administration_fee: adminFee && String(adminFee) !== '' ? Number(adminFee) : null,
     is_published: formData.get('is_published') === 'true',
+    managed_by_domov: formData.get('managed_by_domov') === 'true',
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
     chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
     matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
@@ -56,7 +57,7 @@ export async function createProperty(formData: FormData) {
 
 export async function updateProperty(id: string, formData: FormData) {
   const supabase = await createClient()
-  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, maps_url, chip, matricula').eq('id', id).single()
+  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, managed_by_domov, maps_url, chip, matricula').eq('id', id).single()
   const monthlyPrice = formData.get('monthly_price')
   const adminFee = formData.get('administration_fee')
   const mapsUrl = formData.get('maps_url')
@@ -71,6 +72,7 @@ export async function updateProperty(id: string, formData: FormData) {
     monthly_price: monthlyPrice && String(monthlyPrice) !== '' ? Number(monthlyPrice) : null,
     administration_fee: adminFee && String(adminFee) !== '' ? Number(adminFee) : null,
     is_published: formData.get('is_published') === 'true',
+    managed_by_domov: formData.get('managed_by_domov') === 'true',
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
     chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
     matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
@@ -80,7 +82,7 @@ export async function updateProperty(id: string, formData: FormData) {
   const { error } = await supabase.from('properties').update(update as any).eq('id', id)
   if (error) throw new Error(error.message)
   if (before) {
-    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'maps_url', 'chip', 'matricula'])
+    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'managed_by_domov', 'maps_url', 'chip', 'matricula'])
     if (Object.keys(changes).length > 0) {
       await logAudit({ action: 'update', entity: 'property', entityId: id, entityName: update.name, changes: changes as unknown as Json })
     }
@@ -151,6 +153,17 @@ export async function togglePublished(id: string, isPublished: boolean) {
   await logAudit({ action: 'update', entity: 'property', entityId: id, entityName: before?.name ?? null, changes: { is_published: { old: (before?.is_published ?? null) as Json, new: isPublished as Json } } as unknown as Json })
   revalidatePath('/admin/propiedades')
   revalidatePath('/propiedades')
+}
+
+export async function toggleManaged(id: string, managed: boolean) {
+  const supabase = await createClient()
+  const { data: before } = await supabase.from('properties').select('name, managed_by_domov').eq('id', id).single()
+  const { error } = await supabase.from('properties')
+    .update({ managed_by_domov: managed })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  await logAudit({ action: 'update', entity: 'property', entityId: id, entityName: before?.name ?? null, changes: { managed_by_domov: { old: (before?.managed_by_domov ?? null) as Json, new: managed as Json } } as unknown as Json })
+  revalidatePath('/admin/propiedades')
 }
 
 export async function addPropertyPhoto(propertyId: string, photoUrl: string, isCover: boolean) {

@@ -1,0 +1,1 @@
+ALTER TABLE properties ADD COLUMN managed_by_domov BOOLEAN DEFAULT FALSE;

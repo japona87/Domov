@@ -170,6 +170,23 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
             Publicar en la landing pública
           </Label>
         </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="managed_by_domov_check"
+            defaultChecked={(property as (typeof property & { managed_by_domov?: boolean | null }))?.managed_by_domov ?? false}
+            onChange={(e) => {
+              const hidden = document.getElementById('managed_by_domov') as HTMLInputElement | null
+              if (hidden) hidden.value = String(e.target.checked)
+            }}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <input type="hidden" name="managed_by_domov" id="managed_by_domov" defaultValue={String((property as (typeof property & { managed_by_domov?: boolean | null }))?.managed_by_domov ?? false)} />
+          <Label htmlFor="managed_by_domov_check" className="cursor-pointer font-normal">
+            Administrada por Domov
+          </Label>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border p-6 space-y-4">

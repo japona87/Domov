@@ -7,6 +7,7 @@ import { DeleteButton } from '@/components/delete-button'
 import { TogglePublished } from '@/components/admin/toggle-published'
 import { SearchBar } from '@/components/admin/search-bar'
 import { MapPreviewButton } from '@/components/admin/map-preview'
+import { ToggleManaged } from '@/components/admin/toggle-managed'
 import { deleteProperty } from '@/lib/actions/properties'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,7 @@ type PropertyRow = {
   address: string
   type: string
   is_published: boolean
+  managed_by_domov: boolean
   maps_url: string | null
   contracts: { id: string; status: string }[]
 }
@@ -40,7 +42,7 @@ export default async function PropiedadesPage({
 
   let query = supabase
     .from('properties')
-    .select('id, name, address, type, is_published, maps_url, contracts(id, status)')
+    .select('id, name, address, type, is_published, managed_by_domov, maps_url, contracts(id, status)')
 
   if (q?.trim()) {
     const search = `%${q.trim()}%`
@@ -54,7 +56,7 @@ export default async function PropiedadesPage({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-sans font-semibold text-foreground">Propiedades</h2>
-          <p className="text-sm text-muted-foreground mt-1">{properties?.length ?? 0} inmuebles registrados</p>
+          <p className="text-sm text-muted-foreground mt-1">{properties?.length ?? 0} inmuebles registrados{properties ? <> · {properties.filter(p => p.managed_by_domov).length} administrados por Domov</> : ''}</p>
         </div>
         <Button variant="outline" asChild>
           <Link href="/admin/propiedades/nueva">+ Nuevo inmueble</Link>
@@ -73,6 +75,7 @@ export default async function PropiedadesPage({
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Tipo</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Estado</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Publicado</th>
+              <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Gestión</th>
               <th className="w-10 px-5 py-3.5"></th>
               <th className="px-5 py-3.5"></th>
               <th className="w-14 px-5 py-3.5"></th>
@@ -99,6 +102,9 @@ export default async function PropiedadesPage({
                       <TogglePublished propertyId={p.id} isPublished={p.is_published} />
                   </td>
                   <td className="px-5 py-4">
+                    <ToggleManaged propertyId={p.id} managed={p.managed_by_domov} />
+                  </td>
+                  <td className="px-5 py-4">
                     <MapPreviewButton mapsUrl={p.maps_url} />
                   </td>
                   <td className="px-5 py-4 text-right">
@@ -119,7 +125,7 @@ export default async function PropiedadesPage({
             })}
             {(!properties || properties.length === 0) && (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
                   {q?.trim()
                     ? 'No se encontraron propiedades con ese criterio de búsqueda.'
                     : <>No hay propiedades.{' '}
