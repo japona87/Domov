@@ -102,7 +102,7 @@ export default async function PropiedadesPage({
                       <TogglePublished propertyId={p.id} isPublished={p.is_published} />
                   </td>
                   <td className="px-5 py-4">
-                    <ToggleManaged propertyId={p.id} managed={p.managed_by_domov} />
+                    <ToggleManaged propertyId={p.id} managed={p.managed_by_domov} disabled={!isOccupied} />
                   </td>
                   <td className="px-5 py-4">
                     <MapPreviewButton mapsUrl={p.maps_url} />

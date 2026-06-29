@@ -158,6 +158,10 @@ export async function togglePublished(id: string, isPublished: boolean) {
 export async function toggleManaged(id: string, managed: boolean) {
   const supabase = await createClient()
   const { data: before } = await supabase.from('properties').select('name, managed_by_domov').eq('id', id).single()
+  if (managed) {
+    const { data: contracts } = await supabase.from('contracts').select('id').eq('property_id', id).in('status', ['active', 'ending']).limit(1)
+    if (!contracts || contracts.length === 0) throw new Error('No se puede activar gestión Domov sin un contrato activo.')
+  }
   const { error } = await supabase.from('properties')
     .update({ managed_by_domov: managed })
     .eq('id', id)
