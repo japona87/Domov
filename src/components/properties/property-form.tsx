@@ -76,19 +76,6 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
 
   const mapsUrlValid = !mapsUrl || mapsUrl.startsWith('https://www.google.com/maps/embed')
 
-  const mapsHref = !mapsUrl || !mapsUrlValid
-    ? '#'
-    : (() => {
-        const placeId = mapsUrl.match(/!1s([^!]+)/)?.[1]
-        if (placeId) return `https://www.google.com/maps/place/?q=place_id:${placeId}`
-        const lat = mapsUrl.match(/!3d(-?\d+\.\d+)/)?.[1]
-        const lng = mapsUrl.match(/!2d(-?\d+\.\d+)/)?.[1]
-        if (lat && lng) return `https://www.google.com/maps/@${lat},${lng},18z?entry=api`
-        return property
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${property.address} Bogotá`)}`
-          : '#'
-      })()
-
   const visibleFields = featureConfigs.filter((f) => f.property_type === currentType && f.is_active)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -330,19 +317,6 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
                 </svg>
                 URL válida — el mapa se mostrará en la landing
               </span>
-              <a
-                href={mapsHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-accent hover:underline"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                Abrir en Google Maps
-              </a>
               <Button type="button" variant="outline" size="sm" onClick={() => setMapOpen(true)} className="h-6 text-[11px] px-2">
                 Ver mapa
               </Button>

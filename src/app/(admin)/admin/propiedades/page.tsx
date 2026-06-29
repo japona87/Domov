@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { DeleteButton } from '@/components/delete-button'
 import { TogglePublished } from '@/components/admin/toggle-published'
 import { SearchBar } from '@/components/admin/search-bar'
+import { MapPreviewButton } from '@/components/admin/map-preview'
 import { deleteProperty } from '@/lib/actions/properties'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,7 @@ type PropertyRow = {
   address: string
   type: string
   is_published: boolean
+  maps_url: string | null
   contracts: { id: string; status: string }[]
 }
 
@@ -38,7 +40,7 @@ export default async function PropiedadesPage({
 
   let query = supabase
     .from('properties')
-    .select('id, name, address, type, is_published, contracts(id, status)')
+    .select('id, name, address, type, is_published, maps_url, contracts(id, status)')
 
   if (q?.trim()) {
     const search = `%${q.trim()}%`
@@ -71,6 +73,7 @@ export default async function PropiedadesPage({
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Tipo</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Estado</th>
               <th className="text-left px-5 py-3.5 font-medium text-muted-foreground text-xs tracking-wider">Publicado</th>
+              <th className="w-10 px-5 py-3.5"></th>
               <th className="px-5 py-3.5"></th>
               <th className="w-14 px-5 py-3.5"></th>
             </tr>
@@ -94,6 +97,9 @@ export default async function PropiedadesPage({
                   </td>
                   <td className="px-5 py-4">
                       <TogglePublished propertyId={p.id} isPublished={p.is_published} />
+                  </td>
+                  <td className="px-5 py-4">
+                    <MapPreviewButton mapsUrl={p.maps_url} />
                   </td>
                   <td className="px-5 py-4 text-right">
                     <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent hover:bg-accent/10">
