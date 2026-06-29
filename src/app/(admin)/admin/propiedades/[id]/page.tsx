@@ -17,13 +17,19 @@ export default async function EditarPropiedadPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [propertyResult, featureConfigs] = await Promise.all([
+  const [propertyResult, featureConfigs, parentsResult] = await Promise.all([
     supabase.from('properties').select('*').eq('id', id).single(),
     getFeatureConfigs(),
+    supabase.from('properties').select('id, name, address').is('parent_property_id', null).neq('id', id).order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
   ])
 
   const { data: property } = propertyResult
   if (!property) notFound()
+
+  const parentOptions = (parentsResult.data ?? []).map((p) => ({
+    id: p.id,
+    label: `${p.name} — ${p.address}`,
+  }))
 
   const { data: propertyOwners } = await supabase
     .from('property_owners')
@@ -52,6 +58,7 @@ export default async function EditarPropiedadPage({
           id: string; property_type: string; field_key: string; field_label: string
           placeholder: string; field_type: string; sort_order: number; is_active: boolean
         }>}
+        parentOptions={parentOptions}
         cancelHref="/admin/propiedades"
         fotosHref={`/admin/propiedades/${id}/fotos`}
       />

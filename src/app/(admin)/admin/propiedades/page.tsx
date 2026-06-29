@@ -29,6 +29,7 @@ type PropertyRow = {
   is_published: boolean
   managed_by_domov: boolean
   maps_url: string | null
+  parent_property_id: string | null
   contracts: { id: string; status: string }[]
 }
 
@@ -42,21 +43,100 @@ export default async function PropiedadesPage({
 
   let query = supabase
     .from('properties')
-    .select('id, name, address, type, is_published, managed_by_domov, maps_url, contracts(id, status)')
+    .select('id, name, address, type, is_published, managed_by_domov, maps_url, parent_property_id, contracts(id, status)')
 
   if (q?.trim()) {
     const search = `%${q.trim()}%`
     query = query.or(`name.ilike.${search},address.ilike.${search}`)
   }
 
-  const { data: properties } = await query.order('name') as { data: PropertyRow[] | null }
+  const { data: allProperties } = await query.order('name') as { data: PropertyRow[] | null }
+
+  const properties = allProperties ?? []
+
+  const parentMap = new Map(properties.filter(p => !p.parent_property_id).map(p => [p.id, p]))
+  const childrenMap = new Map<string, PropertyRow[]>()
+  for (const p of properties) {
+    if (p.parent_property_id) {
+      const list = childrenMap.get(p.parent_property_id) ?? []
+      list.push(p)
+      childrenMap.set(p.parent_property_id, list)
+    }
+  }
+
+  const domovCount = properties.filter(p => p.managed_by_domov).length
+
+  function isOccupied(p: PropertyRow) {
+    return p.contracts?.some((c) => ['active', 'ending'].includes(c.status))
+  }
+
+  function renderRow(p: PropertyRow, isChild = false) {
+    const occupied = isOccupied(p)
+    const parentName = p.parent_property_id ? parentMap.get(p.parent_property_id)?.name : null
+    return (
+      <tr key={p.id} className={`hover:bg-muted/50 transition-colors ${isChild ? 'border-t-0' : ''}`}>
+        <td className={`px-5 py-4 ${isChild ? 'pl-14' : ''}`}>
+          <div className="flex items-center gap-2">
+            {isChild && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground shrink-0 -ml-7">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+              </svg>
+            )}
+            <div>
+              <p className={`font-medium ${isChild ? 'text-muted-foreground' : 'text-foreground'}`}>
+                {isChild && <span className="text-muted-foreground/60 mr-1">🅿</span>}
+                {p.name}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isChild && parentName ? `Incluido en ${parentName}` : p.address}
+              </p>
+            </div>
+          </div>
+        </td>
+        <td className="px-5 py-4 text-muted-foreground">{TYPE_LABELS[p.type] ?? p.type}</td>
+        <td className="px-5 py-4">
+          <Badge variant={occupied ? 'default' : 'secondary'}>
+            {occupied ? (isChild ? 'Ocupado (incluido)' : 'Ocupado') : 'Libre'}
+          </Badge>
+        </td>
+        <td className="px-5 py-4">
+            <TogglePublished propertyId={p.id} isPublished={p.is_published} />
+        </td>
+        <td className="px-5 py-4">
+          {isChild ? (
+            <span className="text-[11px] text-muted-foreground/60 italic">Heredado</span>
+          ) : (
+            <ToggleManaged propertyId={p.id} managed={p.managed_by_domov} disabled={!isOccupied(p)} />
+          )}
+        </td>
+        <td className="px-5 py-4">
+          <MapPreviewButton mapsUrl={p.maps_url} />
+        </td>
+        <td className="px-5 py-4 text-right">
+          <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent hover:bg-accent/10">
+            <Link href={`/admin/propiedades/${p.id}`} title="Editar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </Link>
+          </Button>
+        </td>
+        <td className="px-5 py-4">
+          <DeleteButton action={deleteProperty} id={p.id} />
+        </td>
+      </tr>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-sans font-semibold text-foreground">Propiedades</h2>
-          <p className="text-sm text-muted-foreground mt-1">{properties?.length ?? 0} inmuebles registrados{properties ? <> · {properties.filter(p => p.managed_by_domov).length} administrados por Domov</> : ''}</p>
+          <p className="text-sm text-muted-foreground mt-1">{properties.length} inmuebles registrados · {domovCount} administrados por Domov</p>
         </div>
         <Button variant="outline" asChild>
           <Link href="/admin/propiedades/nueva">+ Nuevo inmueble</Link>
@@ -82,48 +162,13 @@ export default async function PropiedadesPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {properties?.map((p) => {
-              const isOccupied = p.contracts?.some((c) =>
-                ['active', 'ending'].includes(c.status)
-              )
-              return (
-                <tr key={p.id} className="hover:bg-muted/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <p className="font-medium text-foreground">{p.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{p.address}</p>
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">{TYPE_LABELS[p.type] ?? p.type}</td>
-                  <td className="px-5 py-4">
-                    <Badge variant={isOccupied ? 'default' : 'secondary'}>
-                      {isOccupied ? 'Ocupado' : 'Libre'}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-4">
-                      <TogglePublished propertyId={p.id} isPublished={p.is_published} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <ToggleManaged propertyId={p.id} managed={p.managed_by_domov} disabled={!isOccupied} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <MapPreviewButton mapsUrl={p.maps_url} />
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent hover:bg-accent/10">
-                      <Link href={`/admin/propiedades/${p.id}`} title="Editar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </Link>
-                    </Button>
-                  </td>
-                  <td className="px-5 py-4">
-                    <DeleteButton action={deleteProperty} id={p.id} />
-                  </td>
-                </tr>
-              )
-            })}
-            {(!properties || properties.length === 0) && (
+            {properties.filter(p => !p.parent_property_id).map((parent) => (
+              <>
+                {renderRow(parent)}
+                {(childrenMap.get(parent.id) ?? []).map((child) => renderRow(child, true))}
+              </>
+            ))}
+            {properties.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
                   {q?.trim()

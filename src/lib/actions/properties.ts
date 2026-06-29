@@ -32,6 +32,7 @@ export async function createProperty(formData: FormData) {
   const mapsUrl = formData.get('maps_url')
   const chip = formData.get('chip')
   const matricula = formData.get('matricula')
+  const parentPropertyId = formData.get('parent_property_id')
   const insert = {
     name: String(formData.get('name')),
     address: String(formData.get('address')),
@@ -45,6 +46,7 @@ export async function createProperty(formData: FormData) {
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
     chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
     matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
+    parent_property_id: parentPropertyId && String(parentPropertyId).trim() !== '' ? String(parentPropertyId).trim() : null,
   }
   validatePropertyFields({ name: insert.name, monthly_price: insert.monthly_price })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,12 +59,13 @@ export async function createProperty(formData: FormData) {
 
 export async function updateProperty(id: string, formData: FormData) {
   const supabase = await createClient()
-  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, managed_by_domov, maps_url, chip, matricula').eq('id', id).single()
+  const { data: before } = await supabase.from('properties').select('name, address, type, description, features, monthly_price, administration_fee, is_published, managed_by_domov, maps_url, chip, matricula, parent_property_id').eq('id', id).single()
   const monthlyPrice = formData.get('monthly_price')
   const adminFee = formData.get('administration_fee')
   const mapsUrl = formData.get('maps_url')
   const chip = formData.get('chip')
   const matricula = formData.get('matricula')
+  const parentPropertyId = formData.get('parent_property_id')
   const update = {
     name: String(formData.get('name')),
     address: String(formData.get('address')),
@@ -76,13 +79,14 @@ export async function updateProperty(id: string, formData: FormData) {
     maps_url: mapsUrl && String(mapsUrl).trim() !== '' ? String(mapsUrl).trim() : null,
     chip: chip && String(chip).trim() !== '' ? String(chip).trim() : null,
     matricula: matricula && String(matricula).trim() !== '' ? String(matricula).trim() : null,
+    parent_property_id: parentPropertyId && String(parentPropertyId).trim() !== '' ? String(parentPropertyId).trim() : null,
   }
   validatePropertyFields({ name: update.name, monthly_price: update.monthly_price })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase.from('properties').update(update as any).eq('id', id)
   if (error) throw new Error(error.message)
   if (before) {
-    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'managed_by_domov', 'maps_url', 'chip', 'matricula'])
+    const changes = diffFields(before as unknown as typeof update, update, ['name', 'address', 'type', 'description', 'features', 'monthly_price', 'administration_fee', 'is_published', 'managed_by_domov', 'maps_url', 'chip', 'matricula', 'parent_property_id'])
     if (Object.keys(changes).length > 0) {
       await logAudit({ action: 'update', entity: 'property', entityId: id, entityName: update.name, changes: changes as unknown as Json })
     }
@@ -108,6 +112,10 @@ export async function deleteProperty(prevState: { error?: string } | undefined, 
     .limit(1)
   if (activeContracts && activeContracts.length > 0) {
     return { error: 'No se puede eliminar la propiedad porque tiene contratos activos. Finalice los contratos primero.' }
+  }
+  const { data: children } = await supabase.from('properties').select('id').eq('parent_property_id', id).limit(1)
+  if (children && children.length > 0) {
+    return { error: 'No se puede eliminar la propiedad porque tiene inmuebles vinculados (ej. parqueadero). Desvincúlelos primero.' }
   }
   const { data: endedContracts } = await supabase
     .from('contracts')

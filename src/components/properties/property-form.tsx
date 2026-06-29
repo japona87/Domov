@@ -46,6 +46,7 @@ interface PropertyFormProps {
   property?: Property
   onSubmit: (formData: FormData) => Promise<void>
   featureConfigs: FieldConfig[]
+  parentOptions?: { id: string; label: string }[]
   cancelHref?: string
   fotosHref?: string
 }
@@ -59,7 +60,7 @@ const PROPERTY_TYPES = [
   { value: 'other', label: 'Otro' },
 ]
 
-export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = '/admin/propiedades', fotosHref }: PropertyFormProps) {
+export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions, cancelHref = '/admin/propiedades', fotosHref }: PropertyFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
@@ -141,6 +142,24 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
             ))}
           </select>
         </div>
+
+        {parentOptions && parentOptions.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="parent_property_id">Propiedad principal</Label>
+            <select
+              id="parent_property_id"
+              name="parent_property_id"
+              defaultValue={(property as (typeof property & { parent_property_id?: string | null }))?.parent_property_id ?? ''}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Es una propiedad independiente</option>
+              {parentOptions.map((po) => (
+                <option key={po.id} value={po.id}>{po.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">Usa este campo para vincular un garaje a su apartamento o casa.</p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="description">Descripción</Label>

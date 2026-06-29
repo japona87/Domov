@@ -57,11 +57,12 @@ function monthsBetween(d1: string, d2: string): number {
   return Math.round((b.getTime() - a.getTime()) / (30.44 * 86400000))
 }
 
-export function ContractForm({ properties, tenants, onSubmit, contract, cancelHref = '/admin/contratos' }: ContractFormProps) {
+export function ContractForm({ properties, tenants, onSubmit, contract, cancelHref = '/admin/contratos', childrenMap = {} }: ContractFormProps & { childrenMap?: Record<string, { id: string; name: string }[]> }) {
   const isEditing = !!contract
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [errors, setErrors] = useState<string[]>([])
+  const [selectedPropertyId, setSelectedPropertyId] = useState(contract?.property_id ?? '')
   const [monthlyRentDisplay, setMonthlyRentDisplay] = useState(
     contract ? formatPrice(String(contract.monthly_rent)) : ''
   )
@@ -147,6 +148,7 @@ export function ContractForm({ properties, tenants, onSubmit, contract, cancelHr
             name="property_id"
             required
             defaultValue={contract?.property_id ?? ''}
+            onChange={(e) => setSelectedPropertyId(e.target.value)}
             className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
           >
             <option value="">Seleccionar inmueble</option>
@@ -154,6 +156,11 @@ export function ContractForm({ properties, tenants, onSubmit, contract, cancelHr
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
+          {selectedPropertyId && childrenMap[selectedPropertyId] && childrenMap[selectedPropertyId].length > 0 && (
+            <div className="mt-2 text-xs text-muted-foreground bg-accent/5 border border-accent/20 rounded-md px-3 py-2">
+              Incluye: {childrenMap[selectedPropertyId].map(c => c.name.replace(/^🅿 /, '')).join(', ')}
+            </div>
+          )}
         </div>
         <div className="space-y-1">
           <Label htmlFor="tenant_id">Arrendatario *</Label>

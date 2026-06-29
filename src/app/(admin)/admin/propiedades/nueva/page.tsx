@@ -3,9 +3,17 @@ import Link from 'next/link'
 import { createProperty } from '@/lib/actions/properties'
 import { getFeatureConfigs } from '@/lib/actions/config'
 import { PropertyForm } from '@/components/properties/property-form'
+import { createClient } from '@/lib/supabase/server'
 
 export default async function NuevaPropiedadPage() {
+  const supabase = await createClient()
   const featureConfigs = await getFeatureConfigs()
+  const { data: parents } = await supabase.from('properties').select('id, name, address').is('parent_property_id', null).order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null }
+
+  const parentOptions = (parents ?? []).map((p) => ({
+    id: p.id,
+    label: `${p.name} — ${p.address}`,
+  }))
 
   return (
     <div className="space-y-6">
@@ -20,7 +28,7 @@ export default async function NuevaPropiedadPage() {
       <PropertyForm onSubmit={createProperty} featureConfigs={featureConfigs as Array<{
         id: string; property_type: string; field_key: string; field_label: string
         placeholder: string; field_type: string; sort_order: number; is_active: boolean
-      }>} cancelHref="/admin/propiedades" />
+      }>} parentOptions={parentOptions} cancelHref="/admin/propiedades" />
     </div>
   )
 }

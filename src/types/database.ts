@@ -60,10 +60,10 @@ export type Database = {
         Relationships: []
       }
       properties: {
-        Row: { id: string; name: string; address: string; type: string; description: string | null; features: PropertyFeatures; monthly_price: number | null; administration_fee: number | null; maps_url: string | null; chip: string | null; matricula: string | null; is_published: boolean; managed_by_domov: boolean; created_at: string }
-        Insert: { id?: string; name: string; address: string; type: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean; managed_by_domov?: boolean }
-        Update: { name?: string; address?: string; type?: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean; managed_by_domov?: boolean }
-        Relationships: []
+        Row: { id: string; name: string; address: string; type: string; description: string | null; features: PropertyFeatures; monthly_price: number | null; administration_fee: number | null; maps_url: string | null; chip: string | null; matricula: string | null; is_published: boolean; managed_by_domov: boolean; parent_property_id: string | null; created_at: string }
+        Insert: { id?: string; name: string; address: string; type: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean; managed_by_domov?: boolean; parent_property_id?: string | null }
+        Update: { name?: string; address?: string; type?: string; description?: string | null; features?: PropertyFeatures; monthly_price?: number | null; administration_fee?: number | null; maps_url?: string | null; chip?: string | null; matricula?: string | null; is_published?: boolean; managed_by_domov?: boolean; parent_property_id?: string | null }
+        Relationships: [{ foreignKeyName: "properties_parent_property_id_fkey"; columns: ["parent_property_id"]; referencedRelation: "properties"; referencedColumns: ["id"] }]
       }
       property_owners: {
         Row: { id: string; property_id: string; owner_id: string; ownership_pct: number; created_at: string }

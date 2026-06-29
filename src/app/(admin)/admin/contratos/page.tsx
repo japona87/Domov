@@ -33,7 +33,7 @@ export default async function ContratosPage({
   let query = supabase
     .from('contracts')
     .select(`
-      id, status, start_date, end_date, monthly_rent,
+      id, property_id, status, start_date, end_date, monthly_rent,
       properties(name, address),
       tenants(full_name)
     `)
@@ -55,11 +55,19 @@ export default async function ContratosPage({
   }
 
   const { data: contracts } = await query as unknown as { data: Array<{
-    id: string; status: string; start_date: string; end_date: string
+    id: string; property_id: string; status: string; start_date: string; end_date: string
     monthly_rent: number
     properties: { name: string; address: string } | null
     tenants: { full_name: string } | null
   }> | null }
+
+  const childrenResult = await supabase.from('properties').select('id, name, parent_property_id').not('parent_property_id', 'is', null) as unknown as { data: Array<{ id: string; name: string; parent_property_id: string }> | null }
+  const childrenByParent = new Map<string, { id: string; name: string }[]>()
+  for (const child of childrenResult.data ?? []) {
+    const list = childrenByParent.get(child.parent_property_id) ?? []
+    list.push({ id: child.id, name: child.name.replace(/^🅿 /, '') })
+    childrenByParent.set(child.parent_property_id, list)
+  }
 
   return (
     <div className="space-y-6">
@@ -111,6 +119,7 @@ export default async function ContratosPage({
               {(contracts as unknown as Array<{
                 id: string
                 status: string
+                property_id: string
                 start_date: string
                 end_date: string
                 monthly_rent: number
@@ -121,7 +130,13 @@ export default async function ContratosPage({
                 return (
                   <tr key={c.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-5 py-4">
-                      <p className="font-medium text-foreground">{c.properties?.name}</p>
+                      <p className="font-medium text-foreground">
+                        {c.properties?.name}
+                        {c.property_id && (() => {
+                          const kids = childrenByParent.get(c.property_id)
+                          return kids && kids.length > 0 ? <span className="text-muted-foreground font-normal"> + {kids.map(k => k.name).join(', ')}</span> : null
+                        })()}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5">{c.properties?.address}</p>
                     </td>
                     <td className="px-5 py-4 text-foreground">{c.tenants?.full_name ?? '—'}</td>

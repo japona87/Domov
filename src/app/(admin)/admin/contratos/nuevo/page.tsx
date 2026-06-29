@@ -8,15 +8,25 @@ export const dynamic = 'force-dynamic'
 export default async function NuevoContratoPage() {
   const supabase = await createClient()
 
-  const [{ data: properties }, { data: tenants }] = await Promise.all([
+  const [{ data: properties }, { data: tenants }, childrenResult] = await Promise.all([
     supabase.from('properties').select('id, name, address').order('name') as unknown as { data: Array<{id: string; name: string; address: string}> | null },
     supabase.from('tenants').select('id, full_name, document_number').order('full_name') as unknown as { data: Array<{id: string; full_name: string; document_number: string | null}> | null },
+    supabase.from('properties').select('id, name, parent_property_id').not('parent_property_id', 'is', null) as unknown as { data: Array<{id: string; name: string; parent_property_id: string}> | null },
   ])
 
   const propertyOptions = (properties ?? []).map((p) => ({
     id: p.id,
     label: `${p.name} — ${p.address}`,
   }))
+
+  const childrenByParent = new Map<string, { id: string; name: string }[]>()
+  for (const child of childrenResult.data ?? []) {
+    const list = childrenByParent.get(child.parent_property_id) ?? []
+    list.push({ id: child.id, name: child.name })
+    childrenByParent.set(child.parent_property_id, list)
+  }
+
+  const childrenMap = Object.fromEntries(childrenByParent)
 
   const tenantOptions = (tenants ?? []).map((t) => ({
     id: t.id,
@@ -43,6 +53,7 @@ export default async function NuevoContratoPage() {
           tenants={tenantOptions}
           onSubmit={createContract}
           cancelHref="/admin/contratos"
+          childrenMap={childrenMap}
         />
       </div>
     </div>
