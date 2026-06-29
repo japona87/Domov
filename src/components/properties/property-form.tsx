@@ -64,6 +64,9 @@ export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
+  const [parentPropertyId, setParentPropertyId] = useState(
+    (property as (typeof property & { parent_property_id?: string | null }))?.parent_property_id ?? ''
+  )
   const [showMapHelp, setShowMapHelp] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [mapsUrl, setMapsUrl] = useState((property as (typeof property & { maps_url?: string | null }))?.maps_url ?? '')
@@ -133,7 +136,10 @@ export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions
             id="type"
             name="type"
             value={currentType}
-            onChange={(e) => setCurrentType(e.target.value)}
+            onChange={(e) => {
+              setCurrentType(e.target.value)
+              if (e.target.value !== 'garage') setParentPropertyId('')
+            }}
             required
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -143,21 +149,22 @@ export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions
           </select>
         </div>
 
-        {parentOptions && parentOptions.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="parent_property_id">Propiedad principal</Label>
+        {parentOptions && parentOptions.length > 0 && currentType === 'garage' && (
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <Label htmlFor="parent_property_id">Vincular a un inmueble</Label>
             <select
               id="parent_property_id"
               name="parent_property_id"
-              defaultValue={(property as (typeof property & { parent_property_id?: string | null }))?.parent_property_id ?? ''}
+              value={parentPropertyId}
+              onChange={(e) => setParentPropertyId(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Es una propiedad independiente</option>
+              <option value="">Es independiente (no vinculado)</option>
               {parentOptions.map((po) => (
                 <option key={po.id} value={po.id}>{po.label}</option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground">Usa este campo para vincular un garaje a su apartamento o casa.</p>
+            <p className="text-xs text-muted-foreground">Vincula este garaje al apartamento o casa al que pertenece. Se mostrará como parte del inmueble principal en contratos y listados.</p>
           </div>
         )}
 
