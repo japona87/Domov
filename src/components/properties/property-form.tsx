@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogFooter,
+} from '@/components/ui/alert-dialog'
 import { LoadingOverlay } from '@/components/admin/loading-overlay'
 import type { Database, PropertyFeatures } from '@/types/database'
 
@@ -56,6 +64,7 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
   const [showMapHelp, setShowMapHelp] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
   const [mapsUrl, setMapsUrl] = useState((property as (typeof property & { maps_url?: string | null }))?.maps_url ?? '')
   const features = (property?.features ?? {}) as PropertyFeatures
   const [monthlyPrice, setMonthlyPrice] = useState(
@@ -334,10 +343,27 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
                 </svg>
                 Abrir en Google Maps
               </a>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMapOpen(true)} className="h-6 text-[11px] px-2">
+                Ver mapa
+              </Button>
             </div>
           )}
         </div>
       </div>
+
+      <AlertDialog open={mapOpen} onOpenChange={setMapOpen}>
+        <AlertDialogContent className="max-w-5xl h-[85vh] flex flex-col">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vista previa del mapa</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="flex-1 w-full min-h-0 rounded-lg overflow-hidden border">
+            <iframe src={mapsUrl} className="w-full h-full border-0" allowFullScreen loading="lazy" />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cerrar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="bg-white rounded-lg border p-6 space-y-4">
         <h3 className="font-semibold text-slate-800">Precio de referencia</h3>
