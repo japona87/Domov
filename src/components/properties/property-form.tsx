@@ -67,6 +67,19 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
 
   const mapsUrlValid = !mapsUrl || mapsUrl.startsWith('https://www.google.com/maps/embed')
 
+  const mapsHref = !mapsUrl || !mapsUrlValid
+    ? '#'
+    : (() => {
+        const lat = mapsUrl.match(/!3d(-?\d+\.\d+)/)?.[1]
+        const lng = mapsUrl.match(/!2d(-?\d+\.\d+)/)?.[1]
+        if (lat && lng) {
+          return `https://www.google.com/maps?q=${lat},${lng}`
+        }
+        return property
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${property.address} Bogotá`)}`
+          : '#'
+      })()
+
   const visibleFields = featureConfigs.filter((f) => f.property_type === currentType && f.is_active)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -309,7 +322,7 @@ export function PropertyForm({ property, onSubmit, featureConfigs, cancelHref = 
                 URL válida — el mapa se mostrará en la landing
               </span>
               <a
-                href={property ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${property.address} Bogotá`)}` : '#'}
+                href={mapsHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-accent hover:underline"
