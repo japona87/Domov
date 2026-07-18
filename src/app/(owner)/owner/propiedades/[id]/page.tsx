@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { getContractAmendments } from '@/lib/actions/contract-amendments'
 
 export const dynamic = 'force-dynamic'
@@ -52,14 +51,6 @@ export default async function OwnerPropertyDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm text-muted-foreground mb-1">
-          <Link href="/owner/propiedades" className="hover:underline">Mis inmuebles</Link> / Detalle
-        </p>
-        <h2 className="text-2xl font-sans font-semibold text-foreground">{property.name}</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">{property.address}</p>
-      </div>
-
       {contracts.length > 0 ? (
         <div className="space-y-4">
           <h3 className="font-semibold text-foreground">Contratos</h3>

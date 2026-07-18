@@ -120,3 +120,32 @@ Domov — Admin panel for property management (arrendamientos). Next.js 16.2.6, 
 - Current commit — UI polish (icons, buttons, cards, table headers, nav overlay fix)
 - Vercel production: https://domov.co (aliased, may still show old site on some devices until DNS propagates)
 - Vercel CLI authed as `japona87`, team `jhonattan-s-projects2`
+
+## Session — 29 Jun 2026
+
+### Parent-child properties (garage ↔ apartment/parking)
+- `parent_property_id` FK added to `properties` (self-referencing) via migration `017_parent_property_id.sql`.
+- Dropdown "Vincular a un inmueble" only visible when property type is `garage`; switching away from `garage` clears the value.
+- Parent dropdown excludes garages and properties already linked as children (`.is('parent_property_id', null).neq('type', 'garage')`).
+- Parent rows: `bg-muted/30`. Child rows: `bg-white`.
+- `deleteProperty` blocks deletion of parents that have children.
+- Contracts list shows "+ Parqueadero X" when property has children.
+- Contract form shows included parking spots when parent property selected.
+
+### Summary cards by type
+- New `PropertyTypeFilter` client component (`src/components/admin/property-type-filter.tsx`).
+- Cards: Todos, Apartamentos, Casas, Oficinas, Locales, Garajes, Otros — with icons and counts.
+- Click filters by type (`?type=X`), same card removes filter.
+- Counts computed from full dataset (unfiltered).
+- Orphan children (nested garages) are shown even when parent doesn't match filter.
+
+### Row numbering
+- New `#` column as first `<th>`, sequential numbering 1, 2, 3...
+
+### Real-time search
+- `SearchBar` now filters with 300ms debounce on keystroke (no need to press Enter).
+
+### Deploy
+- Commits: `c1a4cf2` (parent selector only for garage) → `24bcca4` (exclude garages from dropdown).
+- Also: `297d68d` (summary cards + numbering + realtime search) → `c4db7d5` (orphan children fix).
+- All pushed to GitHub and deployed to Vercel production.

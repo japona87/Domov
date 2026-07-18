@@ -77,6 +77,12 @@ export type Database = {
         Update: { photo_url?: string; is_cover?: boolean; sort_order?: number }
         Relationships: []
       }
+      property_services: {
+        Row: { id: string; property_id: string; service_type: string; account_number: string; contract_number: string | null; provider_name: string | null; client_number: string | null; file_url: string | null; file_name: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; property_id: string; service_type: string; account_number: string; contract_number?: string | null; provider_name?: string | null; client_number?: string | null; file_url?: string | null; file_name?: string | null }
+        Update: { service_type?: string; account_number?: string; contract_number?: string | null; provider_name?: string | null; client_number?: string | null; file_url?: string | null; file_name?: string | null }
+        Relationships: [{ foreignKeyName: "property_services_property_id_fkey"; columns: ["property_id"]; referencedRelation: "properties"; referencedColumns: ["id"] }]
+      }
       property_feature_configs: {
         Row: { id: string; property_type: string; field_key: string; field_label: string; placeholder: string; field_type: string; sort_order: number; is_active: boolean }
         Insert: { id?: string; property_type: string; field_key: string; field_label: string; placeholder?: string; field_type?: string; sort_order?: number; is_active?: boolean }
