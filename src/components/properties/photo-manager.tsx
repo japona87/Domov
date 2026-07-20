@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { addPropertyPhoto, deletePropertyPhoto, setCoverPhoto } from '@/lib/actions/property-photos'
@@ -72,7 +72,25 @@ export function PhotoManager({ propertyId, photos: initialPhotos }: PhotoManager
   const [uploading, setUploading] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null)
+      if (e.key === 'ArrowLeft') setLightboxIndex(i => i !== null && i > 0 ? i - 1 : i)
+      if (e.key === 'ArrowRight') setLightboxIndex(i => i !== null && i < photos.length - 1 ? i + 1 : i)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [lightboxIndex, photos.length])
+
+  useEffect(() => {
+    if (lightboxIndex !== null) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [lightboxIndex])
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -195,30 +213,37 @@ export function PhotoManager({ propertyId, photos: initialPhotos }: PhotoManager
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {photos.map((photo) => (
-              <div key={photo.id} className="group relative rounded-xl overflow-hidden border border-border bg-muted aspect-[4/3]">
+              <div
+                key={photo.id}
+                className="group relative rounded-xl overflow-hidden border border-border bg-muted aspect-[4/3] cursor-pointer"
+                onClick={() => setLightboxIndex(photos.indexOf(photo))}
+              >
                 <Image
                   src={photo.photo_url}
                   alt="Foto del inmueble"
                   fill
-                  className="object-cover"
+                  className="object-cover pointer-events-none"
                   sizes="(max-width: 768px) 50vw, 25vw"
                 />
 
                 {/* Cover badge */}
                 {photo.is_cover && (
-                  <div className="absolute top-2 left-2 bg-accent text-accent-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  <div className="absolute top-2 left-2 bg-accent text-accent-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full pointer-events-none">
                     Portada
                   </div>
                 )}
 
-                {/* Hover actions */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
+                {/* Hover overlay background */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                {/* Hover action buttons — pointer-events-none so clicks reach container */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3 pointer-events-none">
                   {!photo.is_cover && (
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="w-full text-xs h-7"
-                      onClick={() => handleSetCover(photo)}
+                      className="w-full text-xs h-7 pointer-events-auto"
+                      onClick={(e) => { e.stopPropagation(); handleSetCover(photo) }}
                       disabled={isPending}
                     >
                       Hacer portada
@@ -227,8 +252,8 @@ export function PhotoManager({ propertyId, photos: initialPhotos }: PhotoManager
                   <Button
                     size="sm"
                     variant="destructive"
-                    className="w-full text-xs h-7"
-                    onClick={() => setDeleteTarget(photo)}
+                    className="w-full text-xs h-7 pointer-events-auto"
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(photo) }}
                     disabled={isPending}
                   >
                     Eliminar
@@ -239,6 +264,63 @@ export function PhotoManager({ propertyId, photos: initialPhotos }: PhotoManager
           </div>
         )}
       </div>
+
+      {lightboxIndex !== null && (
+        <div className="fixed inset-0 z-[100] bg-black">
+          <div className="relative w-full h-full">
+            <Image
+              src={photos[lightboxIndex].photo_url}
+              alt={`Foto ${lightboxIndex + 1}`}
+              fill
+              className="object-contain"
+              sizes="100vw"
+              priority
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-l from-black/20 via-transparent to-black/20 pointer-events-none" />
+
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
+              <div className="bg-black/30 backdrop-blur-sm text-white/80 text-sm font-sans px-3 py-1 rounded-full">
+                {lightboxIndex + 1} / {photos.length}
+              </div>
+              <button
+                onClick={() => setLightboxIndex(null)}
+                className="w-11 h-11 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors flex items-center justify-center text-white"
+                aria-label="Cerrar"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {lightboxIndex > 0 && (
+              <button
+                onClick={e => { e.stopPropagation(); setLightboxIndex(i => i! - 1) }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors flex items-center justify-center text-white"
+                aria-label="Anterior"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M15 18 9 12l6-6"/>
+                </svg>
+              </button>
+            )}
+
+            {lightboxIndex < photos.length - 1 && (
+              <button
+                onClick={e => { e.stopPropagation(); setLightboxIndex(i => i! + 1) }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors flex items-center justify-center text-white"
+                aria-label="Siguiente"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

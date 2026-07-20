@@ -158,9 +158,14 @@ export default async function PropiedadesPage({
           <h2 className="text-2xl font-sans font-semibold text-foreground">Propiedades</h2>
           <p className="text-sm text-muted-foreground mt-1">{properties.length} inmuebles registrados · {domovCount} administrados por Domov</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/propiedades/nueva">+ Nuevo inmueble</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/propiedades/reporte">Reporte</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin/propiedades/nueva">+ Nuevo inmueble</Link>
+          </Button>
+        </div>
       </div>
 
       <Suspense fallback={null}>

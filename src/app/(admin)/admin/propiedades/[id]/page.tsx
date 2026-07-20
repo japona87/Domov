@@ -41,7 +41,6 @@ export default async function EditarPropiedadPage({
       }>}
       parentOptions={parentOptions}
       cancelHref="/admin/propiedades"
-      fotosHref={`/admin/propiedades/${id}/fotos`}
     />
   )
 }

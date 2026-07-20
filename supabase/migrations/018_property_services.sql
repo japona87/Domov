@@ -14,7 +14,8 @@ CREATE TABLE property_services (
 
 CREATE INDEX idx_property_services_property ON property_services(property_id);
 
-INSERT INTO storage.buckets (id, name, public) VALUES ('service-files', 'service-files', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('service-files', 'service-files', true)
+ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "admin_service_files" ON storage.objects FOR ALL
   USING (bucket_id = 'service-files' AND is_admin());

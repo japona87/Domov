@@ -1,81 +1,433 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 import {
   addService, updateService, deleteService,
-  uploadServiceFile, deleteServiceFile,
+  setServiceFileUrl, deleteServiceFile,
 } from '@/lib/actions/services'
 import { SERVICE_TYPES, SERVICE_TYPE_LABELS, SERVICE_ICONS } from '@/lib/services-shared'
 import type { PropertyServiceRow } from '@/lib/services-shared'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
-function ServiceCard({ svc, propertyId, onEdit }: { svc: PropertyServiceRow; propertyId: string; onEdit: () => void }) {
+const FILE_ICONS: Record<string, string> = {
+  pdf: '/file-pdf.svg',
+  png: '/file-image.svg',
+  jpg: '/file-image.svg',
+  jpeg: '/file-image.svg',
+  webp: '/file-image.svg',
+}
+
+function fileExt(name: string) {
+  const parts = name.split('.')
+  return parts.length > 1 ? parts.pop()!.toLowerCase() : ''
+}
+
+export function ServicesManager({ services: initialServices, propertyId }: { services: PropertyServiceRow[]; propertyId: string }) {
+  const router = useRouter()
+  const [services, setServices] = useState<PropertyServiceRow[]>(initialServices)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formError, setFormError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PropertyServiceRow | null>(null)
+  const [deleteMode, setDeleteMode] = useState<'service' | 'file'>('service')
 
-  function handleFileUpload(file: File) {
+  const existingTypes = new Set(services.map(s => s.service_type))
+
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const type = fd.get('service_type') as string
+    const acct = (fd.get('account_number') as string)?.trim()
+    if (!acct) { setFormError('Número de cuenta requerido'); return }
+    if (existingTypes.has(type)) { setFormError(`Ya existe un servicio de ${SERVICE_TYPE_LABELS[type] ?? type}`); return }
+    setFormError('')
+
+    const fileInput = e.currentTarget.querySelector<HTMLInputElement>('input[name="file"]')
+    const file = fileInput?.files?.[0]
+
     startTransition(async () => {
-      try { await uploadServiceFile(svc.id, propertyId, file) } catch (e: unknown) { alert(e instanceof Error ? e.message : 'Error') }
+      try {
+        const result = await addService(propertyId, fd)
+        let fileUrl: string | null = null
+        let fileName: string | null = null
+        if (result?.id && file) {
+          const supabase = createClient()
+          const ext = file.name.split('.').pop() ?? 'pdf'
+          const path = `${propertyId}/${result.id}.${ext}`
+          const { error: uploadError } = await supabase.storage
+            .from('service-files')
+            .upload(path, file, { upsert: true })
+          if (uploadError) throw new Error(uploadError.message)
+          const { data: { publicUrl } } = supabase.storage
+            .from('service-files')
+            .getPublicUrl(path)
+          fileUrl = publicUrl
+          fileName = file.name
+          await setServiceFileUrl(result.id, propertyId, publicUrl, file.name)
+        }
+        if (result) {
+          setServices(prev => [...prev, {
+            id: result.id,
+            property_id: propertyId,
+            service_type: result.service_type,
+            account_number: (fd.get('account_number') as string)?.trim() ?? '',
+            contract_number: (fd.get('contract_number') as string)?.trim() || null,
+            provider_name: (fd.get('provider_name') as string)?.trim() || null,
+            client_number: (fd.get('client_number') as string)?.trim() || null,
+            file_url: fileUrl,
+            file_name: fileName,
+          }])
+        }
+        setShowForm(false)
+        router.refresh()
+      } catch (err: unknown) {
+        setFormError(err instanceof Error ? err.message : 'Error al crear servicio')
+      }
     })
   }
 
-  function handleDeleteFile() {
-    if (!confirm('¿Eliminar archivo?')) return
+  async function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const acct = (fd.get('account_number') as string)?.trim()
+    if (!acct) { setFormError('Número de cuenta requerido'); return }
+    setFormError('')
+
+    const fileInput = e.currentTarget.querySelector<HTMLInputElement>('input[name="file"]')
+    const file = fileInput?.files?.[0]
+
     startTransition(async () => {
-      try { await deleteServiceFile(svc.id, propertyId) } catch (e: unknown) { alert(e instanceof Error ? e.message : 'Error') }
+      try {
+        await updateService(editingId!, fd)
+        let fileUrl: string | null = null
+        let fileName: string | null = null
+        if (file) {
+          const supabase = createClient()
+          const ext = file.name.split('.').pop() ?? 'pdf'
+          const path = `${propertyId}/${editingId!}.${ext}`
+          const { error: uploadError } = await supabase.storage
+            .from('service-files')
+            .upload(path, file, { upsert: true })
+          if (uploadError) throw new Error(uploadError.message)
+          const { data: { publicUrl } } = supabase.storage
+            .from('service-files')
+            .getPublicUrl(path)
+          fileUrl = publicUrl
+          fileName = file.name
+          await setServiceFileUrl(editingId!, propertyId, publicUrl, file.name)
+        }
+        setServices(prev => prev.map(s =>
+          s.id === editingId
+            ? {
+                ...s,
+                account_number: (fd.get('account_number') as string)?.trim() ?? s.account_number,
+                contract_number: (fd.get('contract_number') as string)?.trim() || s.contract_number,
+                provider_name: (fd.get('provider_name') as string)?.trim() || s.provider_name,
+                client_number: (fd.get('client_number') as string)?.trim() || s.client_number,
+                file_url: file ? fileUrl : s.file_url,
+                file_name: file ? fileName : s.file_name,
+              }
+            : s
+        ))
+        setShowForm(false)
+        setEditingId(null)
+        router.refresh()
+      } catch (err: unknown) {
+        setFormError(err instanceof Error ? err.message : 'Error al actualizar servicio')
+      }
     })
   }
 
-  function handleDelete() {
-    if (!confirm(`¿Eliminar servicio ${SERVICE_TYPE_LABELS[svc.service_type] ?? svc.service_type}?`)) return
+  function handleDelete(svc: PropertyServiceRow) {
     startTransition(async () => {
-      try { await deleteService(svc.id) } catch (e: unknown) { alert(e instanceof Error ? e.message : 'Error') }
+      try {
+        await deleteService(svc.id)
+        setServices(prev => prev.filter(s => s.id !== svc.id))
+        setDeleteTarget(null)
+        router.refresh()
+      } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error') }
     })
   }
+
+  function handleFileUpload(svc: PropertyServiceRow, file: File) {
+    startTransition(async () => {
+      try {
+        const supabase = createClient()
+        const ext = file.name.split('.').pop() ?? 'pdf'
+        const path = `${propertyId}/${svc.id}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('service-files')
+          .upload(path, file, { upsert: true })
+        if (uploadError) throw new Error(uploadError.message)
+        const { data: { publicUrl } } = supabase.storage
+          .from('service-files')
+          .getPublicUrl(path)
+        await setServiceFileUrl(svc.id, propertyId, publicUrl, file.name)
+        setServices(prev => prev.map(s => s.id === svc.id ? { ...s, file_url: publicUrl, file_name: file.name } : s))
+        router.refresh()
+      } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error') }
+    })
+  }
+
+  function handleDeleteFile(svc: PropertyServiceRow) {
+    setDeleteMode('file')
+    setDeleteTarget(svc)
+  }
+
+  function confirmDeleteAction() {
+    if (!deleteTarget) return
+    if (deleteMode === 'file') {
+      startTransition(async () => {
+        try {
+          await deleteServiceFile(deleteTarget.id, propertyId)
+          setServices(prev => prev.map(s => s.id === deleteTarget.id ? { ...s, file_url: null, file_name: null } : s))
+          setDeleteTarget(null)
+          router.refresh()
+        } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Error') }
+      })
+    } else {
+      handleDelete(deleteTarget)
+    }
+  }
+
+  function closeDeleteDialog() {
+    setDeleteTarget(null)
+  }
+
+  function openCreateForm() {
+    const firstAvailable = SERVICE_TYPES.find(t => !existingTypes.has(t))
+    if (!firstAvailable) { alert('Todos los tipos de servicio ya están agregados'); return }
+    setEditingId(null)
+    setShowForm(true)
+    setFormError('')
+  }
+
+  const editingSvc = showForm && editingId ? services.find(s => s.id === editingId) : null
 
   return (
-    <div className="border border-border rounded-xl p-4 space-y-3 bg-white">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{SERVICE_ICONS[svc.service_type] ?? '📋'}</span>
-          <div>
-            <p className="font-medium text-foreground">{SERVICE_TYPE_LABELS[svc.service_type] ?? svc.service_type}</p>
-            {svc.provider_name && <p className="text-xs text-muted-foreground">{svc.provider_name}</p>}
-          </div>
+          <span className="font-medium text-foreground">Servicios Públicos</span>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{services.length}</span>
         </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={onEdit} title="Editar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        {!showForm && (
+          <Button variant="outline" size="sm" onClick={openCreateForm} disabled={isPending}>
+            + Nuevo servicio
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleDelete} disabled={isPending} title="Eliminar" className="text-destructive hover:text-destructive">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-          </Button>
+        )}
+      </div>
+
+      {/* Inline form for create/edit */}
+      {showForm && (
+        <ServiceForm
+          key={editingId ?? 'new'}
+          svc={editingSvc}
+          existingTypes={existingTypes}
+          onSubmit={editingSvc ? handleUpdate : handleCreate}
+          onCancel={() => { setShowForm(false); setEditingId(null); setFormError('') }}
+          error={formError}
+          isPending={isPending}
+        />
+      )}
+
+      {/* Table */}
+      {services.length === 0 && !showForm ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">Sin servicios registrados.</p>
+      ) : (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/50">
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Tipo</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3"># Cuenta</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Recibo</th>
+                <th className="text-right text-xs font-medium text-muted-foreground px-4 py-3">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {services.map((svc) => (
+                <ServiceRow
+                  key={svc.id}
+                  svc={svc}
+                  onEdit={() => { setEditingId(svc.id); setShowForm(true); setFormError('') }}
+                  onDelete={() => { setDeleteMode('service'); setDeleteTarget(svc) }}
+                  onFileUpload={(file) => handleFileUpload(svc, file)}
+                  onDeleteFile={() => handleDeleteFile(svc)}
+                  isPending={isPending}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Image src="/logo-domov.png" alt="Domov" width={28} height={28} />
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              {deleteMode === 'service' ? '¿Eliminar este servicio?' : '¿Eliminar este recibo?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteMode === 'service'
+                ? 'El servicio y su recibo (si existe) se eliminarán permanentemente.'
+                : 'El archivo del recibo se eliminará permanentemente.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending} onClick={closeDeleteDialog}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDeleteAction} disabled={isPending}>
+              {isPending ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+function ServiceForm({ svc, existingTypes, onSubmit, onCancel, error, isPending }: {
+  svc?: PropertyServiceRow | null
+  existingTypes: Set<string>
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
+  onCancel: () => void
+  error: string
+  isPending: boolean
+}) {
+  const isEdit = !!svc
+  const availableTypes = isEdit
+    ? SERVICE_TYPES
+    : SERVICE_TYPES.filter(t => !existingTypes.has(t))
+
+  return (
+    <form onSubmit={onSubmit} className="border border-border rounded-xl p-4 space-y-3 bg-muted/20">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Tipo *</label>
+          <select
+            name="service_type"
+            defaultValue={svc?.service_type ?? availableTypes[0]}
+            className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+            disabled={isEdit}
+          >
+            {availableTypes.map(t => (
+              <option key={t} value={t}>{SERVICE_ICONS[t]} {SERVICE_TYPE_LABELS[t]}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground"># Cuenta *</label>
+          <input
+            name="account_number"
+            defaultValue={svc?.account_number ?? ''}
+            required
+            className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Contrato</label>
+          <input
+            name="contract_number"
+            defaultValue={svc?.contract_number ?? ''}
+            className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Proveedor</label>
+          <input
+            name="provider_name"
+            defaultValue={svc?.provider_name ?? ''}
+            className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Cliente</label>
+          <input
+            name="client_number"
+            defaultValue={svc?.client_number ?? ''}
+            className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Recibo (PDF, imagen)</label>
+          <input
+            name="file"
+            type="file"
+            accept=".pdf,image/*"
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent file:text-accent-foreground hover:file:bg-accent/80"
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div><span className="text-muted-foreground text-xs">Cuenta:</span><p className="font-mono text-xs">{svc.account_number}</p></div>
-        {svc.contract_number && <div><span className="text-muted-foreground text-xs">Contrato:</span><p className="font-mono text-xs">{svc.contract_number}</p></div>}
-        {svc.client_number && <div><span className="text-muted-foreground text-xs">Cliente:</span><p className="font-mono text-xs">{svc.client_number}</p></div>}
-      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div className="border-t border-border pt-3">
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={isPending}>Cancelar</Button>
+        <Button type="submit" size="sm" disabled={isPending}>{isPending ? 'Guardando...' : 'Guardar'}</Button>
+      </div>
+    </form>
+  )
+}
+
+function ServiceRow({ svc, onEdit, onDelete, onFileUpload, onDeleteFile, isPending }: {
+  svc: PropertyServiceRow
+  onEdit: () => void
+  onDelete: () => void
+  onFileUpload: (file: File) => void
+  onDeleteFile: () => void
+  isPending: boolean
+}) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const ext = svc.file_name ? fileExt(svc.file_name) : ''
+  const fileIcon = ext ? (FILE_ICONS[ext] ?? '/file-generic.svg') : null
+
+  return (
+    <tr className="bg-white hover:bg-muted/20 transition-colors">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{SERVICE_ICONS[svc.service_type] ?? '📋'}</span>
+          <span className="text-sm font-medium text-foreground">{SERVICE_TYPE_LABELS[svc.service_type] ?? svc.service_type}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <p className="text-sm font-mono text-foreground">{svc.account_number}</p>
+        {svc.provider_name && <p className="text-xs text-muted-foreground">{svc.provider_name}</p>}
+      </td>
+      <td className="px-4 py-3">
         {svc.file_url ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span className="text-muted-foreground truncate max-w-[200px]">{svc.file_name}</span>
-            </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" asChild>
-                <a href={svc.file_url} target="_blank" rel="noopener noreferrer" title="Ver">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </a>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleDeleteFile} disabled={isPending} title="Eliminar archivo" className="text-destructive hover:text-destructive">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            {fileIcon && (
+              <Image src={fileIcon} alt={ext} width={16} height={16} className="shrink-0" />
+            )}
+            <a
+              href={svc.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:underline truncate max-w-[120px] inline-block"
+            >
+              {svc.file_name}
+            </a>
+            <Button variant="ghost" size="sm" onClick={onDeleteFile} disabled={isPending} className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </Button>
           </div>
         ) : (
           <div>
@@ -84,130 +436,31 @@ function ServiceCard({ svc, propertyId, onEdit }: { svc: PropertyServiceRow; pro
               type="file"
               accept=".pdf,image/*"
               className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); e.target.value = '' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) { onFileUpload(f); e.target.value = '' } }}
             />
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={isPending}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={isPending} className="text-xs h-7">
               Subir recibo
             </Button>
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-export function ServicesManager({ services, propertyId }: { services: PropertyServiceRow[]; propertyId: string }) {
-  const [isPending, startTransition] = useTransition()
-  const [editingId, setEditingId] = useState<string | null>(null)
-
-  function handleAdd(type: string) {
-    const fd = new FormData()
-    fd.set('service_type', type)
-    fd.set('account_number', '')
-    startTransition(async () => {
-      try { await addService(propertyId, fd) } catch (e: unknown) { alert(e instanceof Error ? e.message : 'Error') }
-    })
-  }
-
-  if (editingId) {
-    const svc = services.find(s => s.id === editingId)
-    if (!svc) { setEditingId(null); return null }
-    return (
-      <EditServiceForm
-        svc={svc}
-        onSave={async (fd) => {
-          await updateService(editingId, fd)
-          setEditingId(null)
-        }}
-        onCancel={() => setEditingId(null)}
-      />
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="font-medium text-foreground">Servicios Públicos</span>
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{services.length}</span>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {SERVICE_TYPES.map((t) => {
-          const exists = services.some(s => s.service_type === t)
-          return (
-            <Button
-              key={t}
-              variant="outline"
-              size="sm"
-              disabled={isPending || exists}
-              onClick={() => handleAdd(t)}
-              className={exists ? 'opacity-40 cursor-not-allowed' : ''}
-            >
-              {SERVICE_ICONS[t] ?? '📋'} {SERVICE_TYPE_LABELS[t] ?? t}
-              {exists ? ' ✓' : ''}
-            </Button>
-          )
-        })}
-      </div>
-
-      {services.length === 0 && (
-        <p className="text-sm text-muted-foreground py-8 text-center">Agrega servicios públicos usando los botones de arriba.</p>
-      )}
-
-      <div className="grid gap-4">
-        {services.map((svc) => (
-          <ServiceCard key={svc.id} svc={svc} propertyId={propertyId} onEdit={() => setEditingId(svc.id)} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function EditServiceForm({ svc, onSave, onCancel }: { svc: PropertyServiceRow; onSave: (fd: FormData) => Promise<void>; onCancel: () => void }) {
-  const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState('')
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const acct = (fd.get('account_number') as string)?.trim()
-    if (!acct) { setError('Número de cuenta requerido'); return }
-    setError('')
-    startTransition(async () => {
-      try { await onSave(fd) } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error') }
-    })
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 space-y-4">
-      <h3 className="font-medium text-foreground">{SERVICE_TYPE_LABELS[svc.service_type] ?? svc.service_type}</h3>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Número de cuenta *</label>
-          <input name="account_number" defaultValue={svc.account_number} required className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="sm" onClick={onEdit} title="Editar" className="text-accent">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onDelete} disabled={isPending} title="Eliminar" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </Button>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Número de contrato</label>
-          <input name="contract_number" defaultValue={svc.contract_number ?? ''} className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Empresa/proveedor</label>
-          <input name="provider_name" defaultValue={svc.provider_name ?? ''} className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Número de cliente</label>
-          <input name="client_number" defaultValue={svc.client_number ?? ''} className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-        </div>
-      </div>
-
-      {error && <p className="text-xs text-destructive">{error}</p>}
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" size="sm" disabled={isPending}>Guardar</Button>
-      </div>
-    </form>
+      </td>
+    </tr>
   )
 }

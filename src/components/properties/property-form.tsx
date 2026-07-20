@@ -2,7 +2,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,7 +47,6 @@ interface PropertyFormProps {
   featureConfigs: FieldConfig[]
   parentOptions?: { id: string; label: string }[]
   cancelHref?: string
-  fotosHref?: string
 }
 
 const PROPERTY_TYPES = [
@@ -60,7 +58,7 @@ const PROPERTY_TYPES = [
   { value: 'other', label: 'Otro' },
 ]
 
-export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions, cancelHref = '/admin/propiedades', fotosHref }: PropertyFormProps) {
+export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions, cancelHref = '/admin/propiedades' }: PropertyFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const [currentType, setCurrentType] = useState(property?.type ?? 'apartment')
@@ -106,11 +104,6 @@ export function PropertyForm({ property, onSubmit, featureConfigs, parentOptions
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-slate-800">Información básica</h3>
           <div className="flex items-center gap-2">
-            {fotosHref && (
-              <Link href={fotosHref}>
-                <Button type="button" variant="outline">Fotos</Button>
-              </Link>
-            )}
             <Button type="submit" variant="outline" disabled={isPending}>
               {isPending ? 'Guardando...' : (property ? 'Guardar cambios' : 'Crear inmueble')}
             </Button>

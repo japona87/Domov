@@ -35,6 +35,8 @@ export async function addService(propertyId: string, formData: FormData) {
 
   revalidatePath(`/admin/propiedades/${propertyId}/servicios`)
   revalidatePath(`/owner/propiedades/${propertyId}/servicios`)
+
+  return data
 }
 
 export async function updateService(serviceId: string, formData: FormData) {
@@ -84,32 +86,16 @@ export async function deleteService(serviceId: string) {
   revalidatePath(`/owner/propiedades/${svc.property_id}/servicios`)
 }
 
-export async function uploadServiceFile(serviceId: string, propertyId: string, file: File) {
+export async function setServiceFileUrl(serviceId: string, propertyId: string, publicUrl: string, fileName: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  const ext = file.name.split('.').pop() ?? 'pdf'
-  const path = `${propertyId}/${serviceId}.${ext}`
-
-  const arrayBuffer = await file.arrayBuffer()
-  const { error: uploadError } = await supabase.storage
-    .from('service-files')
-    .upload(path, arrayBuffer, {
-      contentType: file.type,
-      upsert: true,
-    })
-  if (uploadError) throw new Error(uploadError.message)
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('service-files')
-    .getPublicUrl(path)
-
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from('property_services')
-    .update({ file_url: publicUrl, file_name: file.name })
+    .update({ file_url: publicUrl, file_name: fileName })
     .eq('id', serviceId)
-  if (updateError) throw new Error(updateError.message)
+  if (error) throw new Error(error.message)
 
   await logAudit({
     action: 'update', entity: 'property_service', entityId: serviceId,

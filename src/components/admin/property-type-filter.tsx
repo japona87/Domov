@@ -2,14 +2,15 @@
 
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCallback } from 'react'
+import Image from 'next/image'
 
-const TYPE_ICONS: Record<string, string> = {
-  apartment: '🏢',
-  house: '🏠',
-  office: '🏬',
-  local: '🏪',
-  garage: '🅿',
-  other: '📦',
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  apartment: <span className="text-lg">🏢</span>,
+  house: <span className="text-lg">🏠</span>,
+  office: <span className="text-lg">🏬</span>,
+  local: <span className="text-lg">🏪</span>,
+  garage: <Image src="/icons/parking.png" alt="Garaje" width={20} height={20} className="inline-block" />,
+  other: <span className="text-lg">📦</span>,
 }
 
 const TYPE_LABELS: Record<string, string> = {

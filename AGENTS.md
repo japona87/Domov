@@ -149,3 +149,36 @@ Domov — Admin panel for property management (arrendamientos). Next.js 16.2.6, 
 - Commits: `c1a4cf2` (parent selector only for garage) → `24bcca4` (exclude garages from dropdown).
 - Also: `297d68d` (summary cards + numbering + realtime search) → `c4db7d5` (orphan children fix).
 - All pushed to GitHub and deployed to Vercel production.
+
+## Session — 19 Jul 2026
+
+### Property services — file upload fix
+- RLS deshabilitado en `property_services` (SQL ejecutado manualmente).
+- Subida de archivos migrada de server action a **client-side** (como contratos): `createClient()` de `@/lib/supabase/client` sube directo a Storage, luego `setServiceFileUrl` actualiza DB.
+- Creado bucket `service-files` (`public: true`) + storage policies (admin ALL, owner SELECT).
+- `uploadServiceFile` reemplazado por `setServiceFileUrl` (solo actualiza DB).
+- `handleCreate`/`handleUpdate` ahora actualizan estado local inmediatamente (no dependen de `router.refresh()`).
+
+### Fotos button removed from PropertyForm
+- Eliminada prop `fotosHref`, botón y bloque `<Link>` de `property-form.tsx`.
+- Ya hay tab Fotos en la navegación por tabs.
+
+### Icon standardization — inline SVGs
+- Arrendatarios, Propietarios, Contratos: edit buttons cambiados de `<Link>` a `<Button variant="ghost" size="sm" asChild>` con `text-accent hover:bg-accent/10` (idéntico a Propiedades).
+- Contratos: color corregido de `text-blue-600` → `text-accent`.
+- Servicios: edit button recibe `className="text-accent"`.
+- Todos los SVG edit/delete: `width=20 height=20`, mismos paths.
+- Creados `public/file-pdf.svg`, `public/file-image.svg`, `public/file-generic.svg` (iconos de archivo para servicios).
+- Agregados PNGs: `public/icons/parking.png` (usado en PropertyTypeFilter Garajes), `public/icons/address.png`, `public/icons/edit.png`, `public/icons/delete.png`.
+
+### Completeness report
+- Nueva ruta `/admin/propiedades/reporte` — dashboard de completitud.
+- Server action `getCompletenessReport()` en `src/lib/actions/report.ts`.
+- Evalúa 10 campos por propiedad: Descripción, Chip, Matrícula, Precio, Administración, Mapa, Características, Fotos, Propietario, Servicios.
+- Overall %, distribución por rango, tabla con barra de progreso y badges de faltantes.
+- Botón "Reporte" en el header de la lista de propiedades.
+
+### Supabase storage
+- Plan: Gratuito (1 GB storage), usado 71.28 MB (7%).
+- Bucket `service-files` creado con `public: true`.
+- Storage policies creadas para admin y owner.

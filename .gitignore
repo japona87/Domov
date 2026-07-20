@@ -46,3 +46,4 @@ design-mock/
 
 # design mockup reference
 /DomovClaudeDesing/
+.env*
